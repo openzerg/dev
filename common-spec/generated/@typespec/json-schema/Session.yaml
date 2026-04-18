@@ -1,0 +1,55 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Session.yaml
+type: object
+properties:
+  id:
+    type: string
+  title:
+    type: string
+  roleId:
+    type: string
+  workerId:
+    type: string
+  agentId:
+    type: string
+  sessionToken:
+    type: string
+  state:
+    type: string
+  workspaceId:
+    type: string
+  inputTokens:
+    type: string
+  outputTokens:
+    type: string
+  lastActiveAt:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - title
+  - roleId
+  - workerId
+  - agentId
+  - sessionToken
+  - state
+  - workspaceId
+  - inputTokens
+  - outputTokens
+  - lastActiveAt
+  - createdAt
+  - updatedAt
+x-indexes:
+  - - roleId
+  - - workerId
+  - - agentId
+  - - state
+  - - workspaceId
+  - - createdAt
+x-unique:
+  - sessionToken
+x-primary-key: id
+x-table: registry_sessions

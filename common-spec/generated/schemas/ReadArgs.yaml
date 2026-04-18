@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: ReadArgs.yaml
+type: object
+properties:
+  path:
+    type: string
+  offset:
+    type: integer
+    minimum: 1
+    maximum: 2147483647
+  limit:
+    type: integer
+    minimum: 1
+    maximum: 10000
+required:
+  - path

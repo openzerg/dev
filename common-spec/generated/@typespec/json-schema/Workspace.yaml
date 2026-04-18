@@ -1,0 +1,28 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Workspace.yaml
+type: object
+properties:
+  id:
+    type: string
+  volumeName:
+    type: string
+  state:
+    type: string
+  boundSessionId:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - volumeName
+  - state
+  - boundSessionId
+  - createdAt
+  - updatedAt
+x-indexes:
+  - - state
+  - - boundSessionId
+x-primary-key: id
+x-table: registry_workspaces

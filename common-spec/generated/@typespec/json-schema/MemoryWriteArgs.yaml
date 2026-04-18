@@ -1,0 +1,11 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: MemoryWriteArgs.yaml
+type: object
+properties:
+  filename:
+    type: string
+  content:
+    type: string
+required:
+  - filename
+  - content

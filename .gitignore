@@ -4,3 +4,9 @@ bun.lock
 dist/
 .turbo/
 .next/
+.playwright-mcp/
+*.log
+.env
+.env.*
+.DS_Store
+tsp-output/

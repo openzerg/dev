@@ -1,0 +1,67 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: ProviderModelConfig.yaml
+type: object
+properties:
+  id:
+    type: string
+  providerId:
+    type: string
+  providerName:
+    type: string
+  modelId:
+    type: string
+  modelName:
+    type: string
+  upstream:
+    type: string
+  apiKey:
+    type: string
+  supportStreaming:
+    type: boolean
+  supportTools:
+    type: boolean
+  supportVision:
+    type: boolean
+  supportReasoning:
+    type: boolean
+  defaultMaxTokens:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  contextLength:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  autoCompactLength:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  enabled:
+    type: boolean
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - providerId
+  - providerName
+  - modelId
+  - modelName
+  - upstream
+  - apiKey
+  - supportStreaming
+  - supportTools
+  - supportVision
+  - supportReasoning
+  - defaultMaxTokens
+  - contextLength
+  - autoCompactLength
+  - enabled
+  - createdAt
+  - updatedAt
+x-indexes:
+  - - providerId
+  - - enabled
+x-primary-key: id
+x-table: ai_proxy_provider_model_configs

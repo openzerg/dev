@@ -1,6 +1,7 @@
 export interface FrontmatterResult {
   name: string
   description: string
+  pkgs: string[]
   content: string
 }
 
@@ -16,6 +17,7 @@ export function parseFrontmatter(raw: string): FrontmatterResult | null {
 
   let name = ""
   let description = ""
+  let pkgs: string[] = []
 
   for (const line of frontmatter.split("\n")) {
     const colonIdx = line.indexOf(":")
@@ -24,9 +26,17 @@ export function parseFrontmatter(raw: string): FrontmatterResult | null {
     const val = line.slice(colonIdx + 1).trim()
     if (key === "name") name = val
     else if (key === "description") description = val
+    else if (key === "pkgs") {
+      try {
+        const parsed = JSON.parse(val)
+        if (Array.isArray(parsed)) pkgs = parsed.map(String)
+      } catch {
+        pkgs = val.split(",").map(s => s.trim()).filter(Boolean)
+      }
+    }
   }
 
   if (!name) return null
 
-  return { name, description, content }
+  return { name, description, pkgs, content }
 }

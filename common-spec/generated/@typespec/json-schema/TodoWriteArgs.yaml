@@ -1,0 +1,10 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: TodoWriteArgs.yaml
+type: object
+properties:
+  todos:
+    type: array
+    items:
+      $ref: TodoItemInput.yaml
+required:
+  - todos

@@ -1,0 +1,20 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: ChatroomMessageSendArgs.yaml
+type: object
+properties:
+  content:
+    type: string
+  chatroomId:
+    type: string
+  mentions:
+    type: array
+    items:
+      type: string
+  attachmentBase64:
+    type: string
+  attachmentName:
+    type: string
+  attachmentMimeType:
+    type: string
+required:
+  - content

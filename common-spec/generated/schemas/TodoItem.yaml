@@ -1,0 +1,17 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: TodoItem.yaml
+type: object
+properties:
+  id:
+    type: string
+  content:
+    type: string
+  status:
+    type: string
+  priority:
+    type: string
+required:
+  - id
+  - content
+  - status
+  - priority

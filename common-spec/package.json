@@ -1,0 +1,44 @@
+{
+  "name": "@openzerg/common",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": "./client/src/index-node.ts",
+      "browser": "./client/src/index-web.ts",
+      "import": "./client/src/index-web.ts",
+      "default": "./client/src/index-web.ts"
+    },
+    "./gen/ai_proxy/v1_pb": "./generated/ts/gen/ai_proxy/v1_pb.ts",
+    "./gen/tools/v1_pb": "./generated/ts/gen/tools/v1_pb.ts",
+    "./gen/registry/v1_pb": "./generated/ts/gen/registry/v1_pb.ts",
+    "./gen/worker/v1_pb": "./generated/ts/gen/worker/v1_pb.ts",
+    "./gen/agent/v1_pb": "./generated/ts/gen/agent/v1_pb.ts",
+    "./gen/skillmanager/v1_pb": "./generated/ts/gen/skillmanager/v1_pb.ts",
+    "./entities/*": "./generated/ts/entities/*.ts"
+  },
+  "scripts": {
+    "generate:proto": "tsp compile specs/main.tsp --output-dir generated && rm -rf generated/proto/* && cp -r generated/@typespec/protobuf/* generated/proto/ && buf generate generated/proto/",
+    "generate:entities": "bun run scripts/codegen-entities.ts",
+    "generate": "bun run generate:proto && bun run generate:entities",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
+    "@connectrpc/connect": "^2.1.1",
+    "@connectrpc/connect-node": "^2.1.1",
+    "@connectrpc/connect-web": "^2.1.1",
+    "neverthrow": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "@types/js-yaml": "^4.0.9",
+    "@typespec/compiler": "1.11.0",
+    "@typespec/http": "1.11.0",
+    "@typespec/json-schema": "1.11.0",
+    "@typespec/protobuf": "0.81.0",
+    "js-yaml": "^4.1.1",
+    "typescript": "^5.8.0"
+  }
+}

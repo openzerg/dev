@@ -1,0 +1,11 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: MemoryReadResult.yaml
+type: object
+properties:
+  content:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - content
+  - updatedAt

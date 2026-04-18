@@ -1,0 +1,52 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Log.yaml
+type: object
+properties:
+  id:
+    type: string
+  proxyId:
+    type: string
+  sourceModel:
+    type: string
+  targetModel:
+    type: string
+  upstream:
+    type: string
+  inputTokens:
+    type: string
+  outputTokens:
+    type: string
+  totalTokens:
+    type: string
+  durationMs:
+    type: string
+  timeToFirstTokenMs:
+    type: string
+  isStream:
+    type: boolean
+  isSuccess:
+    type: boolean
+  errorMessage:
+    type: string
+  createdAt:
+    type: string
+required:
+  - id
+  - proxyId
+  - sourceModel
+  - targetModel
+  - upstream
+  - inputTokens
+  - outputTokens
+  - totalTokens
+  - durationMs
+  - timeToFirstTokenMs
+  - isStream
+  - isSuccess
+  - errorMessage
+  - createdAt
+x-indexes:
+  - - proxyId
+  - - createdAt
+x-primary-key: id
+x-table: ai_proxy_logs

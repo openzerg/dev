@@ -1,0 +1,33 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Proxy.yaml
+type: object
+properties:
+  id:
+    type: string
+  sourceModel:
+    type: string
+    minLength: 1
+  providerModelConfigId:
+    type: string
+  apiKey:
+    type: string
+  enabled:
+    type: boolean
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - sourceModel
+  - providerModelConfigId
+  - apiKey
+  - enabled
+  - createdAt
+  - updatedAt
+x-indexes:
+  - - enabled
+x-unique:
+  - sourceModel
+x-primary-key: id
+x-table: ai_proxy_proxies

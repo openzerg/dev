@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: GrepArgs.yaml
+type: object
+properties:
+  pattern:
+    type: string
+  path:
+    type: string
+  include:
+    type: string
+  maxResults:
+    type: integer
+    minimum: -2147483648
+    maximum: 1000
+required:
+  - pattern

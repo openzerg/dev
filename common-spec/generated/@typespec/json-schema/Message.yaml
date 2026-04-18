@@ -1,0 +1,46 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Message.yaml
+type: object
+properties:
+  id:
+    type: string
+  sessionId:
+    type: string
+  role:
+    type: string
+  parentMessageId:
+    type: string
+  toolCallId:
+    type: string
+  toolName:
+    type: string
+  content:
+    type: string
+  tokenUsage:
+    type: string
+  metadata:
+    type: string
+  compacted:
+    type: boolean
+  createdAt:
+    type: string
+required:
+  - id
+  - sessionId
+  - role
+  - parentMessageId
+  - toolCallId
+  - toolName
+  - content
+  - tokenUsage
+  - metadata
+  - compacted
+  - createdAt
+x-indexes:
+  - - sessionId
+  - - sessionId
+    - createdAt
+  - - sessionId
+    - compacted
+x-primary-key: id
+x-table: registry_messages

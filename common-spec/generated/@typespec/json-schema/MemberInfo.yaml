@@ -1,0 +1,14 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: MemberInfo.yaml
+type: object
+properties:
+  memberId:
+    type: string
+  memberType:
+    type: string
+  name:
+    type: string
+required:
+  - memberId
+  - memberType
+  - name

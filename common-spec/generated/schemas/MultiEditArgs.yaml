@@ -1,0 +1,13 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: MultiEditArgs.yaml
+type: object
+properties:
+  path:
+    type: string
+  edits:
+    type: array
+    items:
+      $ref: EditOperation.yaml
+required:
+  - path
+  - edits

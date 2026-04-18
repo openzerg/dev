@@ -1,0 +1,13 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: WriteArgs.yaml
+type: object
+properties:
+  path:
+    type: string
+  content:
+    type: string
+  createDirs:
+    type: boolean
+required:
+  - path
+  - content

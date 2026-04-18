@@ -1,0 +1,53 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Instance.yaml
+type: object
+properties:
+  id:
+    type: string
+  name:
+    type: string
+  instanceType:
+    type: string
+  ip:
+    type: string
+  port:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  publicUrl:
+    type: string
+  lifecycle:
+    type: string
+  lastSeen:
+    type: string
+  metadata:
+    $ref: "#/$defs/RecordString"
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - name
+  - instanceType
+  - ip
+  - port
+  - publicUrl
+  - lifecycle
+  - lastSeen
+  - metadata
+  - createdAt
+  - updatedAt
+x-indexes:
+  - - instanceType
+  - - lastSeen
+x-int64-fields:
+  - lastSeen
+x-primary-key: id
+x-table: registry_instances
+$defs:
+  RecordString:
+    type: object
+    properties: {}
+    unevaluatedProperties:
+      type: string

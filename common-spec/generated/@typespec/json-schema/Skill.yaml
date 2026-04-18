@@ -1,0 +1,39 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: Skill.yaml
+type: object
+properties:
+  id:
+    type: string
+  slug:
+    type: string
+  name:
+    type: string
+  description:
+    type: string
+  gitUrl:
+    type: string
+  localPath:
+    type: string
+  commitHash:
+    type: string
+  pkgs:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - slug
+  - name
+  - description
+  - gitUrl
+  - localPath
+  - commitHash
+  - pkgs
+  - createdAt
+  - updatedAt
+x-unique:
+  - slug
+x-primary-key: id
+x-table: registry_skills

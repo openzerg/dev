@@ -1,0 +1,10 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: GlobArgs.yaml
+type: object
+properties:
+  pattern:
+    type: string
+  path:
+    type: string
+required:
+  - pattern

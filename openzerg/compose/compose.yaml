@@ -1,0 +1,68 @@
+# OpenZergUltra — 最小化 Compose 配置
+#
+# 只拉起 postgres + registry。
+# registry 启动后通过 Podman API 自动拉起所有服务：
+#   ai-proxy, zcp-fs, zcp-job, zcp-memory, zcp-web,
+#   skill-manager, agent
+#
+# 用法：
+#   podman compose up -d          # 启动 postgres + registry（registry 自动拉起所有服务）
+#
+# 首次使用：
+#   cp .env.example .env && vim .env
+
+services:
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    container_name: uz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openzerg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openzerg}
+      POSTGRES_DB: ${POSTGRES_DB:-openzerg}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - uz-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openzerg}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  registry:
+    build:
+      context: ../../registry
+      dockerfile: Containerfile
+    container_name: uz-registry
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
+      PORT: "25000"
+      MASTER_API_KEY: ${MASTER_API_KEY:-dev-master-key}
+      REGISTRY_INTERNAL_URL: http://uz-registry:25000
+      PODMAN_SOCKET: /run/podman/podman.sock
+      PODMAN_NETWORK: ${PODMAN_NETWORK:-openzerg}
+      WORKER_IMAGE: ${WORKER_IMAGE:-localhost/openzerg/worker:latest}
+      IDLE_TIMEOUT_SEC: ${IDLE_TIMEOUT_SEC:-3600}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      HOST_IP: ${HOST_IP:-127.0.0.1}
+      ZCP_SERVICE_TOKEN: ${ZCP_SERVICE_TOKEN:-}
+      IMAGE_AI_PROXY: ${IMAGE_AI_PROXY:-localhost/openzerg/ai-proxy:latest}
+      IMAGE_ZCP_FS: ${IMAGE_ZCP_FS:-localhost/openzerg/zcp-fs:latest}
+      IMAGE_ZCP_JOB: ${IMAGE_ZCP_JOB:-localhost/openzerg/zcp-job:latest}
+      IMAGE_ZCP_MEMORY: ${IMAGE_ZCP_MEMORY:-localhost/openzerg/zcp-memory:latest}
+      IMAGE_ZCP_WEB: ${IMAGE_ZCP_WEB:-localhost/openzerg/zcp-web:latest}
+      IMAGE_SKILL_MANAGER: ${IMAGE_SKILL_MANAGER:-localhost/openzerg/skill-manager:latest}
+      IMAGE_AGENT: ${IMAGE_AGENT:-localhost/openzerg/agent:latest}
+    ports:
+      - "25000:25000"
+    volumes:
+      - /run/podman/podman.sock:/run/podman/podman.sock
+      - /nix:/nix:ro
+
+volumes:
+  uz-pgdata:

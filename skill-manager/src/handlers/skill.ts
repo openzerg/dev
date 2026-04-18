@@ -17,7 +17,7 @@ function skillRowToInfo(s: Skill) {
   return {
     id: s.id, slug: s.slug, name: s.name, description: s.description,
     gitUrl: s.gitUrl, localPath: s.localPath, commitHash: s.commitHash,
-    createdAt: s.createdAt, updatedAt: s.updatedAt,
+    pkgs: s.pkgs, createdAt: s.createdAt, updatedAt: s.updatedAt,
   }
 }
 
@@ -42,7 +42,7 @@ export function registerSkillHandlers(db: DB, skillsDir: string) {
         const ts = now()
         await db.insertInto("registry_skills").values({
           id, slug: req.slug, name: fm.name, description: fm.description,
-          gitUrl: req.gitUrl, localPath, commitHash,
+          gitUrl: req.gitUrl, localPath, commitHash, pkgs: JSON.stringify(fm.pkgs),
           createdAt: ts, updatedAt: ts,
         }).execute()
 
@@ -66,7 +66,8 @@ export function registerSkillHandlers(db: DB, skillsDir: string) {
         const commitHash = await gitRevParse(row.localPath)
         const ts = now()
         await db.updateTable("registry_skills").set({
-          name: fm.name, description: fm.description, commitHash, updatedAt: ts,
+          name: fm.name, description: fm.description, commitHash,
+          pkgs: JSON.stringify(fm.pkgs), updatedAt: ts,
         }).where("id", "=", row.id).execute()
 
         const updated = await db.selectFrom("registry_skills").selectAll().where("id", "=", row.id).executeTakeFirst()

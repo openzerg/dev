@@ -1,0 +1,50 @@
+FROM docker.io/nixos/nix:latest AS builder
+
+RUN nix --extra-experimental-features "nix-command flakes" \
+    --option substituters "https://mirrors.ustc.edu.cn/nix-channels/store https://cache.nixos.org/" \
+    --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" \
+    profile install github:NixOS/nixpkgs/nixos-25.11#bun
+
+ENV PATH=/nix/profiles/default/bin:${PATH}
+
+WORKDIR /app
+
+COPY package.json bun.lock* ./
+COPY ../common-spec /app/common-spec
+RUN bun install
+
+COPY src/ src/
+COPY tsconfig.json ./
+
+RUN bun build --compile src/main.ts --outfile registry
+
+FROM docker.io/library/debian:trixie-slim
+
+WORKDIR /app
+
+COPY --from=builder /app/registry /app/registry
+
+RUN cat > /entrypoint.sh << 'EOF'
+#!/bin/sh
+set -e
+
+mkdir -p /etc/ssl/certs
+for cert in /nix/store/*-nss-cacert-*/etc/ssl/certs/ca-bundle.crt; do
+    if [ -f "$cert" ]; then
+        ln -sf "$cert" /etc/ssl/certs/ca-certificates.crt
+        export SSL_CERT_FILE="$cert"
+        export CURL_CA_BUNDLE="$cert"
+        break
+    fi
+done
+
+exec "$@"
+EOF
+
+RUN chmod +x /app/registry /entrypoint.sh
+
+ENV REGISTRY_PORT=15319
+EXPOSE 15319
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["./registry"]

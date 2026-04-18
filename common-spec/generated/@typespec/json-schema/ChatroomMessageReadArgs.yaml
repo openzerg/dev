@@ -1,0 +1,12 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: ChatroomMessageReadArgs.yaml
+type: object
+properties:
+  chatroomId:
+    type: string
+  limit:
+    type: integer
+    minimum: -2147483648
+    maximum: 100
+  before:
+    type: string

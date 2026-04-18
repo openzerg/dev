@@ -1,6 +1,6 @@
 import { createServer } from "node:http"
 import { connectNodeAdapter } from "@connectrpc/connect-node"
-import { createZcpServer, SessionResolver } from "@openzerg/zcp"
+import { createZcpServer, SessionResolver, bootstrapZcpService, aggregatePkgs } from "@openzerg/zcp"
 import { openMemoryDB, autoMigrate } from "./db.js"
 import { createMemoryTools } from "./tools/index.js"
 
@@ -8,6 +8,8 @@ const PORT = parseInt(process.env.PORT ?? "25030", 10)
 const DATABASE_URL = process.env.DATABASE_URL ?? ""
 const REGISTRY_URL = process.env.REGISTRY_URL ?? "http://localhost:25000"
 const REGISTRY_TOKEN = process.env.REGISTRY_TOKEN ?? ""
+const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://zcp-memory:${PORT}`
+const HEARTBEAT_SEC = parseInt(process.env.HEARTBEAT_INTERVAL_SEC ?? "30", 10)
 
 async function main() {
   if (!DATABASE_URL) {
@@ -33,8 +35,20 @@ async function main() {
     }),
   })
 
-  createServer(handler).listen(PORT, () => {
+  createServer(handler).listen(PORT, async () => {
     console.log(`zcp-memory listening on :${PORT}`)
+
+    if (REGISTRY_URL) {
+      await bootstrapZcpService({
+        registryUrl: REGISTRY_URL,
+        registryToken: REGISTRY_TOKEN,
+        instanceType: "zcp-memory",
+        port: PORT,
+        publicUrl: PUBLIC_URL,
+        nixPkgs: aggregatePkgs(tools),
+        heartbeatIntervalSec: HEARTBEAT_SEC,
+      })
+    }
   })
 }
 

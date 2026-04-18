@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: ReadResult.yaml
+type: object
+properties:
+  content:
+    type: string
+  truncated:
+    type: boolean
+  totalLines:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+required:
+  - content
+  - truncated
+  - totalLines

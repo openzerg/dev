@@ -23,6 +23,7 @@ export async function autoMigrate(databaseURL: string): Promise<void> {
     .addColumn("gitUrl", "text", (col) => col.notNull())
     .addColumn("localPath", "text", (col) => col.notNull())
     .addColumn("commitHash", "text", (col) => col.notNull())
+    .addColumn("pkgs", "text", (col) => col.notNull().defaultTo("[]"))
     .addColumn("createdAt", "bigint", (col) => col.notNull())
     .addColumn("updatedAt", "bigint", (col) => col.notNull())
     .execute()
