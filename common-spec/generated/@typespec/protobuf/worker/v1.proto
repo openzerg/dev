@@ -8,6 +8,8 @@ syntax = "proto3";
 
 package worker.v1;
 
+import "google/protobuf/empty.proto";
+
 message ExecRequest {
   string command = 1;
   string workdir = 2;
@@ -65,10 +67,28 @@ message StatResponse {
   int64 mtimeMs = 5;
 }
 
+message InstallPackagesRequest {
+  repeated string packages = 1;
+}
+
+message InstallPackagesResponse {
+  repeated string installed = 1;
+  repeated string failed = 2;
+  string envShPath = 3;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}
+
 service WorkerService {
   rpc Exec(ExecRequest) returns (ExecResponse);
   rpc Spawn(SpawnRequest) returns (SpawnResponse);
   rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
   rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
   rpc Stat(StatRequest) returns (StatResponse);
+  rpc InstallPackages(InstallPackagesRequest) returns (InstallPackagesResponse);
+  rpc Health(google.protobuf.Empty) returns (HealthResponse);
 }

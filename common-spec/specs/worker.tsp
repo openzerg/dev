@@ -18,6 +18,8 @@ namespace WorkerV1 {
     readFile(...ReadFileRequest): ReadFileResponse;
     writeFile(...WriteFileRequest): WriteFileResponse;
     stat(...StatRequest): StatResponse;
+    installPackages(...InstallPackagesRequest): InstallPackagesResponse;
+    health(...HealthRequest): HealthResponse;
   }
 
   @message model ExecRequest {
@@ -75,5 +77,21 @@ namespace WorkerV1 {
     @field(3) isDir:   boolean;
     @field(4) size:    int64;
     @field(5) mtimeMs: int64;
+  }
+
+  @message model InstallPackagesRequest {
+    @field(1) packages: string[];
+  }
+
+  @message model InstallPackagesResponse {
+    @field(1) installed: string[];
+    @field(2) failed:    string[];
+    @field(3) envShPath: string;
+  }
+
+  @message model HealthRequest {}
+
+  @message model HealthResponse {
+    @field(1) status: string;
   }
 }

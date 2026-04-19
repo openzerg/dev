@@ -14,10 +14,13 @@ import {
   type StatRequest,
   type StatResponse,
 } from "@openzerg/common/gen/worker/v1_pb.js"
+import { create } from "@bufbuild/protobuf"
+import { InstallPackagesResponseSchema } from "@openzerg/common/gen/worker/v1_pb.js"
 import type { ConnectRouter, Interceptor } from "@connectrpc/connect"
 import { runExec } from "./exec.js"
 import { runSpawn } from "./spawn.js"
 import { runReadFile, runWriteFile, runStat } from "./fs.js"
+import { ensurePackages, getEnvShPath } from "./nix-manager.js"
 
 function workerSecret(): string {
   return process.env.WORKER_SECRET ?? ""
@@ -49,6 +52,18 @@ export function createWorkerRouter(): (router: ConnectRouter) => void {
       },
       stat(req: StatRequest): Promise<StatResponse> {
         return unwrap(runStat(req))
+      },
+      async installPackages(req) {
+        const result = await ensurePackages([...req.packages])
+        if (result.isErr()) throw new ConnectError(result.error.message, Code.Internal)
+        return create(InstallPackagesResponseSchema, {
+          installed: result.value.installed,
+          failed: result.value.failed,
+          envShPath: getEnvShPath(),
+        })
+      },
+      health() {
+        return Promise.resolve({ status: "ok" })
       },
     })
   }

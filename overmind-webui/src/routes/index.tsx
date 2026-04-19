@@ -2,28 +2,29 @@ import { createResource, Show, For } from 'solid-js';
 import { Box, Typography, Card, CardContent, Chip, Grid, CircularProgress, Button } from '@suid/material';
 import Add from '@suid/icons-material/Add';
 import { useNavigate } from '@solidjs/router';
-import { getRegistry } from '~/lib/clients';
+import { getRegistry, getWorkspaceManager } from '~/lib/clients';
 import { useI18n } from '~/i18n/context';
 import { useStore } from '~/lib/store';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const registry = getRegistry();
+  const wm = getWorkspaceManager();
   const { t } = useI18n();
   const store = useStore();
 
   const [stats] = createResource(async () => {
     try {
-      const [sessionsR, rolesR, workspacesR, instancesR] = await Promise.allSettled([
+      const [sessionsR, templatesR, workspacesR, instancesR] = await Promise.allSettled([
         registry.listSessions(),
-        registry.listRoles(),
-        registry.listWorkspaces(),
+        registry.listTemplates(),
+        wm.listWorkspaces(),
         registry.listInstances(''),
       ]);
       const unwrap = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value.isOk() ? r.value.value : null;
       return {
         sessions: unwrap(sessionsR)?.sessions?.length ?? 0,
-        roles: unwrap(rolesR)?.roles?.length ?? 0,
+        roles: unwrap(templatesR)?.templates?.length ?? 0,
         workspaces: unwrap(workspacesR)?.workspaces?.length ?? 0,
         instances: unwrap(instancesR)?.instances?.length ?? 0,
         sessionList: unwrap(sessionsR)?.sessions?.slice(0, 5) ?? [],
@@ -90,7 +91,7 @@ export default function DashboardPage() {
                   <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                     <Box>
                       <Typography fontWeight={600}>{s.title || s.sessionId}</Typography>
-                      <Typography variant="caption" fontFamily="monospace" color="text.secondary">{s.roleName} · {s.state}</Typography>
+                       <Typography variant="caption" fontFamily="monospace" color="text.secondary">{s.templateId && s.templateId.slice(0, 8)} · {s.state}</Typography>
                     </Box>
                     <Chip size="small" label={s.state} color={s.state === 'running' ? 'info' : s.state === 'idle' ? 'success' : 'default'} />
                   </CardContent>

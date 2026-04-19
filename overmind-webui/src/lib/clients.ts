@@ -3,6 +3,7 @@ import {
   AgentClient,
   SkillManagerClient,
   AiProxyClient,
+  WorkspaceManagerClient,
   createWebTransport,
   createAuthInterceptor,
 } from "@openzerg/common"
@@ -12,6 +13,7 @@ let registryClient: RegistryClient | null = null
 let agentClient: AgentClient | null = null
 let skillClient: SkillManagerClient | null = null
 let aiProxyClient: AiProxyClient | null = null
+let wmClient: WorkspaceManagerClient | null = null
 
 export function initializeClients(backend: BackendConfig): void {
   const transport = (baseUrl: string) =>
@@ -21,6 +23,7 @@ export function initializeClients(backend: BackendConfig): void {
   agentClient = new AgentClient({ baseURL: `${backend.url}/api/agent`, token: backend.token, transport })
   skillClient = new SkillManagerClient({ baseURL: `${backend.url}/api/skills`, token: backend.token, transport })
   aiProxyClient = new AiProxyClient({ baseURL: `${backend.url}/api/ai-proxy`, token: backend.token, transport })
+  wmClient = new WorkspaceManagerClient({ baseURL: `${backend.url}/api/wm`, token: backend.token, transport })
 }
 
 export function getRegistry(): RegistryClient {
@@ -43,6 +46,11 @@ export function getAiProxy(): AiProxyClient {
   return aiProxyClient
 }
 
+export function getWorkspaceManager(): WorkspaceManagerClient {
+  if (!wmClient) throw new Error("WorkspaceManager client not initialized")
+  return wmClient
+}
+
 export function isInitialized(): boolean {
   return registryClient !== null
 }
@@ -52,4 +60,5 @@ export function resetClients(): void {
   agentClient = null
   skillClient = null
   aiProxyClient = null
+  wmClient = null
 }

@@ -1,0 +1,60 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: SessionTemplate.yaml
+type: object
+properties:
+  id:
+    type: string
+  name:
+    type: string
+  description:
+    type: string
+  systemPrompt:
+    type: string
+  upstream:
+    type: string
+  apiKey:
+    type: string
+  modelId:
+    type: string
+  maxTokens:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  contextLength:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  autoCompactLength:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  toolServers:
+    type: string
+  skills:
+    type: string
+  extraPkgs:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - name
+  - description
+  - systemPrompt
+  - upstream
+  - apiKey
+  - modelId
+  - maxTokens
+  - contextLength
+  - autoCompactLength
+  - toolServers
+  - skills
+  - extraPkgs
+  - createdAt
+  - updatedAt
+x-unique:
+  - name
+x-primary-key: id
+x-table: session_templates

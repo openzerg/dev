@@ -10,6 +10,7 @@ export interface Translations {
   sessions: Record<string, string>;
   sessionDetail: Record<string, string>;
   roles: Record<string, string>;
+  templates: Record<string, string>;
   skills: Record<string, string>;
   providers: Record<string, string>;
   workspaces: Record<string, string>;

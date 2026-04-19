@@ -3,8 +3,8 @@ import "@typespec/protobuf";
 using Protobuf;
 
 /**
- * ToolService — OpenZergUltra 统一工具调用协议
- * 所有工具服务（zcp-fs、zcp-job、zcp-skill、channel 等）必须实现此接口
+ * ToolService — OpenZergUltra unified tool invocation protocol.
+ * All tool services (tool-fs, tool-job, tool-memory, tool-web, etc.) must implement this interface.
  */
 @package({ name: "tools.v1" })
 namespace ToolsV1 {
@@ -29,6 +29,7 @@ namespace ToolsV1 {
     @field(4) outputSchemaJson: string;
     @field(5) group:            string;
     @field(6) priority:         int32;
+    @field(7) dependencies:     string[];
   }
 
   @message model ExecuteToolRequest {

@@ -1,9 +1,9 @@
-import { createServer } from "node:http"
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import { connectNodeAdapter } from "@connectrpc/connect-node"
+import { WorkspaceManagerClient, ToolServerManagerClient } from "@openzerg/common"
 import { loadConfig } from "./config.js"
 import { openDB, autoMigrate } from "./db.js"
 import { createRegistryRouter } from "./router.js"
-import { startInfrastructure } from "./infrastructure.js"
 import { createProxyHandler } from "./proxy.js"
 import { now } from "./handlers/util.js"
 
@@ -13,8 +13,15 @@ async function main() {
   await autoMigrate(cfg.databaseURL)
   const db = openDB(cfg.databaseURL)
 
+  const wm = new WorkspaceManagerClient({
+    baseURL: process.env.WM_URL || "http://localhost:25020",
+  })
+  const tsm = new ToolServerManagerClient({
+    baseURL: process.env.TSM_URL || "http://localhost:25021",
+  })
+
   const rpcHandler = connectNodeAdapter({
-    routes: createRegistryRouter(db, cfg.podman, cfg.workerImage),
+    routes: createRegistryRouter(db, wm, tsm),
   })
 
   const proxyHandler = createProxyHandler(db)
@@ -25,7 +32,7 @@ async function main() {
     "Access-Control-Allow-Headers": "Content-Type, Authorization, Connect-Protocol-Version, X-Registry-Token",
   }
 
-  const handler = async (req: any, res: any) => {
+  const handler = async (req: IncomingMessage, res: ServerResponse) => {
     res.setHeader("Access-Control-Allow-Origin", corsHeaders["Access-Control-Allow-Origin"])
     res.setHeader("Access-Control-Allow-Methods", corsHeaders["Access-Control-Allow-Methods"])
     res.setHeader("Access-Control-Allow-Headers", corsHeaders["Access-Control-Allow-Headers"])
@@ -38,13 +45,6 @@ async function main() {
     console.log(`registry listening on :${cfg.port}`)
   })
 
-  try {
-    await startInfrastructure(cfg)
-  } catch (err) {
-    console.error("[registry] infrastructure startup failed:", err)
-    console.error("[registry] services will need to be started manually")
-  }
-
   setInterval(async () => {
     try {
       const threshold = now() - BigInt(cfg.idleTimeoutSec)
@@ -56,16 +56,14 @@ async function main() {
 
       for (const session of idleSessions) {
         console.log(`[registry] auto-stopping idle session ${session.id}`)
+        const stopResult = await wm.stopWorker(session.workerId)
+        if (stopResult.isErr()) {
+          console.error(`[registry] WM stopWorker failed: ${stopResult.error.message}`)
+        }
         const ts = now()
         await db.updateTable("registry_sessions").set({
           state: "stopped", workerId: "", updatedAt: ts,
         }).where("id", "=", session.id).execute()
-
-        if (session.workspaceId) {
-          await db.updateTable("registry_workspaces").set({
-            state: "stopped", updatedAt: ts,
-          }).where("id", "=", session.workspaceId).execute()
-        }
       }
     } catch (err) {
       console.error("[registry] idle scanner error:", err)

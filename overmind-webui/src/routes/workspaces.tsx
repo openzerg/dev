@@ -14,17 +14,17 @@ import {
   Chip,
 } from "@suid/material";
 import Delete from "@suid/icons-material/Delete";
-import { getRegistry } from "~/lib/clients";
+import { getWorkspaceManager } from "~/lib/clients";
 import { unwrap } from "~/lib/result";
 import { useI18n } from "~/i18n/context";
 
 export default function WorkspacesPage() {
-  const registry = getRegistry();
+  const wm = getWorkspaceManager();
   const { t } = useI18n();
 
   const [workspaces, { refetch }] = createResource(async () => {
     try {
-      const r = await registry.listWorkspaces();
+      const r = await wm.listWorkspaces();
       if (r.isErr()) return { workspaces: [] };
       return r.value;
     } catch { return { workspaces: [] }; }
@@ -33,7 +33,7 @@ export default function WorkspacesPage() {
   async function handleDelete(id: string) {
     if (!confirm("Delete this workspace?")) return;
     try {
-      const r = await registry.deleteWorkspace(id);
+      const r = await wm.deleteWorkspace(id);
       unwrap(r);
       refetch();
     } catch {}
@@ -72,7 +72,7 @@ export default function WorkspacesPage() {
                     <TableCell>
                       <Chip label={ws.state} size="small" color={stateColor(ws.state)} />
                     </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{ws.boundSessionId || "—"}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{ws.createdBySessionId || "—"}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>
                       {ws.createdAt ? new Date(Number(ws.createdAt)).toLocaleString() : "—"}
                     </TableCell>

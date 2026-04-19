@@ -94,17 +94,24 @@ async function runPipeline(
           .executeTakeFirst()
       ).andThen(row => {
         if (!row) return errAsync(new NotFoundError(`no proxy for model: ${body.model}`))
-        const proxyApiKey = (row as any).apiKey as string
+        const proxyApiKey = row.apiKey
         if (proxyApiKey !== token)
           return errAsync(new UnauthenticatedError("invalid API key"))
-        return okAsync({ body, proxy: row as unknown as ProxyJoined & { upstreamApiKey: string } })
+        const { upstreamApiKey, ...rest } = row
+        const proxy: ProxyJoined = {
+          ...rest,
+          targetModel: rest.targetModel,
+          createdAt: BigInt(rest.createdAt),
+          updatedAt: BigInt(rest.updatedAt),
+        }
+        return okAsync({ body, proxy, upstreamApiKey })
       })
     )
-    .andThen(({ body, proxy }) =>
+    .andThen(({ body, proxy, upstreamApiKey }) =>
       okAsync({
         body,
         proxy,
-        upstreamApiKey: (proxy as any).upstreamApiKey as string,
+        upstreamApiKey,
       })
     )
     .andThen(({ body, proxy, upstreamApiKey }) =>

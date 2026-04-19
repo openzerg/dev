@@ -1,0 +1,50 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: WmWorker.yaml
+type: object
+properties:
+  id:
+    type: string
+  sessionId:
+    type: string
+  containerName:
+    type: string
+  image:
+    type: string
+  state:
+    type: string
+  podmanId:
+    type: string
+  secret:
+    type: string
+  workspaceRoot:
+    type: string
+  filesystemUrl:
+    type: string
+  executionUrl:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+  workspaceId:
+    type: string
+required:
+  - id
+  - sessionId
+  - containerName
+  - image
+  - state
+  - podmanId
+  - secret
+  - workspaceRoot
+  - filesystemUrl
+  - executionUrl
+  - createdAt
+  - updatedAt
+  - workspaceId
+x-indexes:
+  - - sessionId
+  - - state
+  - - containerName
+x-primary-key: id
+x-table: wm_workers

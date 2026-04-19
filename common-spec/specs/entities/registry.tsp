@@ -26,19 +26,23 @@ namespace RegistryEntities {
   }
 
   @jsonSchema
-  @extension("x-table", "registry_roles")
+  @extension("x-table", "session_templates")
   @extension("x-primary-key", "id")
   @extension("x-unique", #["name"])
-  model Role {
+  model SessionTemplate {
     id: string;
     name: string;
     description: string;
     systemPrompt: string;
-    aiProxyId: string;
-    zcpServers: string;
+    upstream: string;
+    apiKey: string;
+    modelId: string;
+    maxTokens: int32;
+    contextLength: int32;
+    autoCompactLength: int32;
+    toolServers: string;
     skills: string;
     extraPkgs: string;
-    maxSteps: int32;
     createdAt: int64;
     updatedAt: int64;
   }
@@ -48,7 +52,7 @@ namespace RegistryEntities {
   @extension("x-primary-key", "id")
   @extension("x-unique", #["sessionToken"])
   @extension("x-indexes", #[
-    #["roleId"],
+    #["templateId"],
     #["workerId"],
     #["agentId"],
     #["state"],
@@ -58,31 +62,25 @@ namespace RegistryEntities {
   model Session {
     id: string;
     title: string;
-    roleId: string;
+    templateId: string;
+    state: string;
+    systemPrompt: string;
+    upstream: string;
+    apiKey: string;
+    modelId: string;
+    maxTokens: int32;
+    contextLength: int32;
+    autoCompactLength: int32;
+    toolServers: string;
+    skills: string;
+    extraPkgs: string;
     workerId: string;
     agentId: string;
     sessionToken: string;
-    state: string;
     workspaceId: string;
     inputTokens: int64;
     outputTokens: int64;
     lastActiveAt: int64;
-    createdAt: int64;
-    updatedAt: int64;
-  }
-
-  @jsonSchema
-  @extension("x-table", "registry_workspaces")
-  @extension("x-primary-key", "id")
-  @extension("x-indexes", #[
-    #["state"],
-    #["boundSessionId"]
-  ])
-  model Workspace {
-    id: string;
-    volumeName: string;
-    state: string;
-    boundSessionId: string;
     createdAt: int64;
     updatedAt: int64;
   }
@@ -109,24 +107,4 @@ namespace RegistryEntities {
     createdAt: int64;
   }
 
-  @jsonSchema
-  @extension("x-table", "registry_workers")
-  @extension("x-primary-key", "id")
-  @extension("x-unique", #["name"])
-  @extension("x-indexes", #[
-    #["lifecycle"]
-  ])
-  model Worker {
-    id: string;
-    name: string;
-    containerName: string;
-    image: string;
-    secret: string;
-    lifecycle: string;
-    workspaceRoot: string;
-    filesystemUrl: string;
-    executionUrl: string;
-    createdAt: int64;
-    updatedAt: int64;
-  }
 }

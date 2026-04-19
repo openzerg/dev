@@ -1,14 +1,14 @@
-# OpenZergUltra — 最小化 Compose 配置
+# OpenZergUltra — Production Compose
 #
-# 只拉起 postgres + registry。
-# registry 启动后通过 Podman API 自动拉起所有服务：
-#   ai-proxy, zcp-fs, zcp-job, zcp-memory, zcp-web,
-#   skill-manager, agent
+# Static services: postgres, registry, workspace-manager, tool-server-manager,
+#                  ai-proxy, skill-manager, agent, nginx
 #
-# 用法：
-#   podman compose up -d          # 启动 postgres + registry（registry 自动拉起所有服务）
+# ZCP tool servers are also started statically; TSM can dynamically scale them.
 #
-# 首次使用：
+# Usage:
+#   podman compose up -d
+#
+# First time:
 #   cp .env.example .env && vim .env
 
 services:
@@ -43,26 +43,102 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
       PORT: "25000"
       MASTER_API_KEY: ${MASTER_API_KEY:-dev-master-key}
-      REGISTRY_INTERNAL_URL: http://uz-registry:25000
+      WM_URL: http://uz-workspace-manager:25020
+      TSM_URL: http://uz-tool-server-manager:25021
+      IDLE_TIMEOUT_SEC: ${IDLE_TIMEOUT_SEC:-3600}
+    ports:
+      - "25000:25000"
+
+  workspace-manager:
+    build:
+      context: ../../workspace-manager
+      dockerfile: Containerfile
+    container_name: uz-workspace-manager
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
+      PORT: "25020"
       PODMAN_SOCKET: /run/podman/podman.sock
       PODMAN_NETWORK: ${PODMAN_NETWORK:-openzerg}
       WORKER_IMAGE: ${WORKER_IMAGE:-localhost/openzerg/worker:latest}
-      IDLE_TIMEOUT_SEC: ${IDLE_TIMEOUT_SEC:-3600}
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
-      HOST_IP: ${HOST_IP:-127.0.0.1}
-      ZCP_SERVICE_TOKEN: ${ZCP_SERVICE_TOKEN:-}
-      IMAGE_AI_PROXY: ${IMAGE_AI_PROXY:-localhost/openzerg/ai-proxy:latest}
-      IMAGE_ZCP_FS: ${IMAGE_ZCP_FS:-localhost/openzerg/zcp-fs:latest}
-      IMAGE_ZCP_JOB: ${IMAGE_ZCP_JOB:-localhost/openzerg/zcp-job:latest}
-      IMAGE_ZCP_MEMORY: ${IMAGE_ZCP_MEMORY:-localhost/openzerg/zcp-memory:latest}
-      IMAGE_ZCP_WEB: ${IMAGE_ZCP_WEB:-localhost/openzerg/zcp-web:latest}
-      IMAGE_SKILL_MANAGER: ${IMAGE_SKILL_MANAGER:-localhost/openzerg/skill-manager:latest}
-      IMAGE_AGENT: ${IMAGE_AGENT:-localhost/openzerg/agent:latest}
     ports:
-      - "25000:25000"
+      - "25020:25020"
     volumes:
       - /run/podman/podman.sock:/run/podman/podman.sock
       - /nix:/nix:ro
+
+  tool-server-manager:
+    build:
+      context: ../../tool-server-manager
+      dockerfile: Containerfile
+    container_name: uz-tool-server-manager
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
+      PORT: "25021"
+      PODMAN_SOCKET: /run/podman/podman.sock
+      PODMAN_NETWORK: ${PODMAN_NETWORK:-openzerg}
+      REGISTRY_URL: http://uz-registry:25000
+    ports:
+      - "25021:25021"
+    volumes:
+      - /run/podman/podman.sock:/run/podman/podman.sock
+      - /nix:/nix:ro
+
+  ai-proxy:
+    build:
+      context: ../../ai-proxy
+      dockerfile: Containerfile
+    container_name: uz-ai-proxy
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
+      PORT: "25300"
+      REGISTRY_URL: http://uz-registry:25000
+
+  skill-manager:
+    build:
+      context: ../../skill-manager
+      dockerfile: Containerfile
+    container_name: uz-skill-manager
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
+      PORT: "25200"
+      REGISTRY_URL: http://uz-registry:25000
+
+  agent:
+    build:
+      context: ../../agent
+      dockerfile: Containerfile
+    container_name: uz-agent
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openzerg}:${POSTGRES_PASSWORD:-openzerg}@postgres:5432/${POSTGRES_DB:-openzerg}
+      PORT: "25100"
+      REGISTRY_URL: http://uz-registry:25000
+      TSM_URL: http://uz-tool-server-manager:25021
+
+  nginx:
+    build:
+      context: ../../nginx
+      dockerfile: Containerfile
+    container_name: uz-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+    depends_on:
+      - registry
+      - workspace-manager
+      - tool-server-manager
 
 volumes:
   uz-pgdata:

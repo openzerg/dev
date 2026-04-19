@@ -12,8 +12,8 @@ const Dashboard = lazy(() => import('./routes/index'));
 const Sessions = lazy(() => import('./routes/sessions/index'));
 const SessionNew = lazy(() => import('./routes/sessions/new'));
 const SessionDetail = lazy(() => import('./routes/sessions/[id]'));
-const Roles = lazy(() => import('./routes/roles/index'));
-const RoleDetail = lazy(() => import('./routes/roles/[id]'));
+const Templates = lazy(() => import('./routes/templates/index'));
+const TemplateDetail = lazy(() => import('./routes/templates/[id]'));
 const Skills = lazy(() => import('./routes/skills/index'));
 const Instances = lazy(() => import('./routes/instances'));
 const Workspaces = lazy(() => import('./routes/workspaces'));
@@ -33,8 +33,8 @@ render(() => (
           <Route path="/sessions" component={Sessions} />
           <Route path="/sessions/new" component={SessionNew} />
           <Route path="/sessions/:id" component={SessionDetail} />
-          <Route path="/roles" component={Roles} />
-          <Route path="/roles/:id" component={RoleDetail} />
+          <Route path="/templates" component={Templates} />
+          <Route path="/templates/:id" component={TemplateDetail} />
           <Route path="/skills" component={Skills} />
           <Route path="/instances" component={Instances} />
           <Route path="/workspaces" component={Workspaces} />

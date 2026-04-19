@@ -11,13 +11,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { EmptySchema } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file worker/v1.proto.
  */
 export const file_worker_v1: GenFile = /*@__PURE__*/
-  fileDesc("Cg93b3JrZXIvdjEucHJvdG8SCXdvcmtlci52MSKcAQoLRXhlY1JlcXVlc3QSDwoHY29tbWFuZBgBIAEoCRIPCgd3b3JrZGlyGAIgASgJEiwKA2VudhgDIAMoCzIfLndvcmtlci52MS5FeGVjUmVxdWVzdC5FbnZFbnRyeRIRCgl0aW1lb3V0TXMYBCABKAUaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJSCgxFeGVjUmVzcG9uc2USEAoIZXhpdENvZGUYASABKAUSDgoGc3Rkb3V0GAIgASgMEg4KBnN0ZGVychgDIAEoDBIQCgh0aW1lZE91dBgEIAEoCCKaAQoMU3Bhd25SZXF1ZXN0Eg0KBWpvYklkGAEgASgJEg8KB2NvbW1hbmQYAiABKAkSDwoHd29ya2RpchgDIAEoCRItCgNlbnYYBCADKAsyIC53b3JrZXIudjEuU3Bhd25SZXF1ZXN0LkVudkVudHJ5GioKCEVudkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiLwoNU3Bhd25SZXNwb25zZRIPCgdzdGFydGVkGAEgASgIEg0KBWVycm9yGAIgASgJIh8KD1JlYWRGaWxlUmVxdWVzdBIMCgRwYXRoGAEgASgJIjQKEFJlYWRGaWxlUmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIPCgdtdGltZU1zGAIgASgDIkoKEFdyaXRlRmlsZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIPCgdjb250ZW50GAIgASgMEhcKD2V4cGVjdGVkTXRpbWVNcxgDIAEoAyIqChFXcml0ZUZpbGVSZXNwb25zZRIVCg1hY3R1YWxNdGltZU1zGAEgASgDIhsKC1N0YXRSZXF1ZXN0EgwKBHBhdGgYASABKAkiXAoMU3RhdFJlc3BvbnNlEg4KBmV4aXN0cxgBIAEoCBIOCgZpc0ZpbGUYAiABKAgSDQoFaXNEaXIYAyABKAgSDAoEc2l6ZRgEIAEoAxIPCgdtdGltZU1zGAUgASgDMsoCCg1Xb3JrZXJTZXJ2aWNlEjcKBEV4ZWMSFi53b3JrZXIudjEuRXhlY1JlcXVlc3QaFy53b3JrZXIudjEuRXhlY1Jlc3BvbnNlEjoKBVNwYXduEhcud29ya2VyLnYxLlNwYXduUmVxdWVzdBoYLndvcmtlci52MS5TcGF3blJlc3BvbnNlEkMKCFJlYWRGaWxlEhoud29ya2VyLnYxLlJlYWRGaWxlUmVxdWVzdBobLndvcmtlci52MS5SZWFkRmlsZVJlc3BvbnNlEkYKCVdyaXRlRmlsZRIbLndvcmtlci52MS5Xcml0ZUZpbGVSZXF1ZXN0Ghwud29ya2VyLnYxLldyaXRlRmlsZVJlc3BvbnNlEjcKBFN0YXQSFi53b3JrZXIudjEuU3RhdFJlcXVlc3QaFy53b3JrZXIudjEuU3RhdFJlc3BvbnNlYgZwcm90bzM");
+  fileDesc("Cg93b3JrZXIvdjEucHJvdG8SCXdvcmtlci52MSKcAQoLRXhlY1JlcXVlc3QSDwoHY29tbWFuZBgBIAEoCRIPCgd3b3JrZGlyGAIgASgJEiwKA2VudhgDIAMoCzIfLndvcmtlci52MS5FeGVjUmVxdWVzdC5FbnZFbnRyeRIRCgl0aW1lb3V0TXMYBCABKAUaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJSCgxFeGVjUmVzcG9uc2USEAoIZXhpdENvZGUYASABKAUSDgoGc3Rkb3V0GAIgASgMEg4KBnN0ZGVychgDIAEoDBIQCgh0aW1lZE91dBgEIAEoCCKaAQoMU3Bhd25SZXF1ZXN0Eg0KBWpvYklkGAEgASgJEg8KB2NvbW1hbmQYAiABKAkSDwoHd29ya2RpchgDIAEoCRItCgNlbnYYBCADKAsyIC53b3JrZXIudjEuU3Bhd25SZXF1ZXN0LkVudkVudHJ5GioKCEVudkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiLwoNU3Bhd25SZXNwb25zZRIPCgdzdGFydGVkGAEgASgIEg0KBWVycm9yGAIgASgJIh8KD1JlYWRGaWxlUmVxdWVzdBIMCgRwYXRoGAEgASgJIjQKEFJlYWRGaWxlUmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIPCgdtdGltZU1zGAIgASgDIkoKEFdyaXRlRmlsZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIPCgdjb250ZW50GAIgASgMEhcKD2V4cGVjdGVkTXRpbWVNcxgDIAEoAyIqChFXcml0ZUZpbGVSZXNwb25zZRIVCg1hY3R1YWxNdGltZU1zGAEgASgDIhsKC1N0YXRSZXF1ZXN0EgwKBHBhdGgYASABKAkiXAoMU3RhdFJlc3BvbnNlEg4KBmV4aXN0cxgBIAEoCBIOCgZpc0ZpbGUYAiABKAgSDQoFaXNEaXIYAyABKAgSDAoEc2l6ZRgEIAEoAxIPCgdtdGltZU1zGAUgASgDIioKFkluc3RhbGxQYWNrYWdlc1JlcXVlc3QSEAoIcGFja2FnZXMYASADKAkiTwoXSW5zdGFsbFBhY2thZ2VzUmVzcG9uc2USEQoJaW5zdGFsbGVkGAEgAygJEg4KBmZhaWxlZBgCIAMoCRIRCgllbnZTaFBhdGgYAyABKAkiDwoNSGVhbHRoUmVxdWVzdCIgCg5IZWFsdGhSZXNwb25zZRIOCgZzdGF0dXMYASABKAky4QMKDVdvcmtlclNlcnZpY2USNwoERXhlYxIWLndvcmtlci52MS5FeGVjUmVxdWVzdBoXLndvcmtlci52MS5FeGVjUmVzcG9uc2USOgoFU3Bhd24SFy53b3JrZXIudjEuU3Bhd25SZXF1ZXN0Ghgud29ya2VyLnYxLlNwYXduUmVzcG9uc2USQwoIUmVhZEZpbGUSGi53b3JrZXIudjEuUmVhZEZpbGVSZXF1ZXN0Ghsud29ya2VyLnYxLlJlYWRGaWxlUmVzcG9uc2USRgoJV3JpdGVGaWxlEhsud29ya2VyLnYxLldyaXRlRmlsZVJlcXVlc3QaHC53b3JrZXIudjEuV3JpdGVGaWxlUmVzcG9uc2USNwoEU3RhdBIWLndvcmtlci52MS5TdGF0UmVxdWVzdBoXLndvcmtlci52MS5TdGF0UmVzcG9uc2USWAoPSW5zdGFsbFBhY2thZ2VzEiEud29ya2VyLnYxLkluc3RhbGxQYWNrYWdlc1JlcXVlc3QaIi53b3JrZXIudjEuSW5zdGFsbFBhY2thZ2VzUmVzcG9uc2USOwoGSGVhbHRoEhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ghkud29ya2VyLnYxLkhlYWx0aFJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_empty]);
 
 /**
  * @generated from message worker.v1.ExecRequest
@@ -275,6 +277,80 @@ export const StatResponseSchema: GenMessage<StatResponse> = /*@__PURE__*/
   messageDesc(file_worker_v1, 9);
 
 /**
+ * @generated from message worker.v1.InstallPackagesRequest
+ */
+export type InstallPackagesRequest = Message<"worker.v1.InstallPackagesRequest"> & {
+  /**
+   * @generated from field: repeated string packages = 1;
+   */
+  packages: string[];
+};
+
+/**
+ * Describes the message worker.v1.InstallPackagesRequest.
+ * Use `create(InstallPackagesRequestSchema)` to create a new message.
+ */
+export const InstallPackagesRequestSchema: GenMessage<InstallPackagesRequest> = /*@__PURE__*/
+  messageDesc(file_worker_v1, 10);
+
+/**
+ * @generated from message worker.v1.InstallPackagesResponse
+ */
+export type InstallPackagesResponse = Message<"worker.v1.InstallPackagesResponse"> & {
+  /**
+   * @generated from field: repeated string installed = 1;
+   */
+  installed: string[];
+
+  /**
+   * @generated from field: repeated string failed = 2;
+   */
+  failed: string[];
+
+  /**
+   * @generated from field: string envShPath = 3;
+   */
+  envShPath: string;
+};
+
+/**
+ * Describes the message worker.v1.InstallPackagesResponse.
+ * Use `create(InstallPackagesResponseSchema)` to create a new message.
+ */
+export const InstallPackagesResponseSchema: GenMessage<InstallPackagesResponse> = /*@__PURE__*/
+  messageDesc(file_worker_v1, 11);
+
+/**
+ * @generated from message worker.v1.HealthRequest
+ */
+export type HealthRequest = Message<"worker.v1.HealthRequest"> & {
+};
+
+/**
+ * Describes the message worker.v1.HealthRequest.
+ * Use `create(HealthRequestSchema)` to create a new message.
+ */
+export const HealthRequestSchema: GenMessage<HealthRequest> = /*@__PURE__*/
+  messageDesc(file_worker_v1, 12);
+
+/**
+ * @generated from message worker.v1.HealthResponse
+ */
+export type HealthResponse = Message<"worker.v1.HealthResponse"> & {
+  /**
+   * @generated from field: string status = 1;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message worker.v1.HealthResponse.
+ * Use `create(HealthResponseSchema)` to create a new message.
+ */
+export const HealthResponseSchema: GenMessage<HealthResponse> = /*@__PURE__*/
+  messageDesc(file_worker_v1, 13);
+
+/**
  * @generated from service worker.v1.WorkerService
  */
 export const WorkerService: GenService<{
@@ -317,6 +393,22 @@ export const WorkerService: GenService<{
     methodKind: "unary";
     input: typeof StatRequestSchema;
     output: typeof StatResponseSchema;
+  },
+  /**
+   * @generated from rpc worker.v1.WorkerService.InstallPackages
+   */
+  installPackages: {
+    methodKind: "unary";
+    input: typeof InstallPackagesRequestSchema;
+    output: typeof InstallPackagesResponseSchema;
+  },
+  /**
+   * @generated from rpc worker.v1.WorkerService.Health
+   */
+  health: {
+    methodKind: "unary";
+    input: typeof EmptySchema;
+    output: typeof HealthResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_worker_v1, 0);

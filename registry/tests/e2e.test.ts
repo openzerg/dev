@@ -1,14 +1,14 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test"
 import { createServer, type Server } from "node:http"
 import { connectNodeAdapter } from "@connectrpc/connect-node"
-import { RegistryClient } from "@openzerg/common"
+import { RegistryClient, type IWorkspaceManager, type IToolServerManager } from "@openzerg/common"
 import type { Result } from "neverthrow"
+import { ResultAsync } from "neverthrow"
 import { PodmanCompose, waitForPort } from "../../openzerg/e2e/compose-helper.js"
 import { openDB, autoMigrate } from "../src/db.js"
 import { createRegistryRouter } from "../src/router.js"
-import { createMockPodman } from "./mock-podman.js"
-import type { PodmanClient } from "../src/podman/client.js"
 import type { AppError } from "@openzerg/common"
+import { randomUUID } from "node:crypto"
 
 const PG_PORT = 15432
 const PG_URL = `postgres://e2e:e2e@127.0.0.1:${PG_PORT}/e2e_test`
@@ -22,6 +22,8 @@ const compose = new PodmanCompose({
 
 let client: RegistryClient
 let server: Server
+let stopWorkerCalls: string[] = []
+let deleteWorkspaceCalls: string[] = []
 
 function unwrap<T>(result: Result<T, AppError>): T {
   if (result.isOk()) return result.value
@@ -38,10 +40,63 @@ beforeAll(async () => {
   }
   if (!migrated) throw new Error("autoMigrate failed after 10 retries")
   const db = openDB(PG_URL)
-  const podman = createMockPodman() as unknown as PodmanClient
+
+  const mockWM: IWorkspaceManager = {
+    health: () => ResultAsync.fromPromise(Promise.resolve({ status: "ok" } as any), () => new Error("fail") as any),
+    createWorkspace: (_sessionId: string) => {
+      const workspaceId = randomUUID()
+      const volumeName = `ws-${workspaceId.slice(0, 12)}`
+      return ResultAsync.fromPromise(
+        Promise.resolve({ workspaceId, volumeName }),
+        () => new Error("fail") as any,
+      )
+    },
+    listWorkspaces: () => ResultAsync.fromPromise(Promise.resolve({ workspaces: [] } as any), () => new Error("fail") as any),
+    getWorkspace: (_id: string) => ResultAsync.fromPromise(Promise.resolve({} as any), () => new Error("fail") as any),
+    deleteWorkspace: (workspaceId: string) => {
+      deleteWorkspaceCalls.push(workspaceId)
+      return ResultAsync.fromPromise(Promise.resolve({}), () => new Error("fail") as any)
+    },
+    startWorker: (_req: any) =>
+      ResultAsync.fromPromise(
+        Promise.resolve({ workerId: randomUUID(), containerName: "worker-test", secret: "test-secret" }),
+        () => new Error("fail") as any,
+      ),
+    stopWorker: (workerId: string) => {
+      stopWorkerCalls.push(workerId)
+      return ResultAsync.fromPromise(Promise.resolve({}), () => new Error("fail") as any)
+    },
+    getWorkerStatus: (_workerId: string) => ResultAsync.fromPromise(Promise.resolve({} as any), () => new Error("fail") as any),
+    listWorkers: () => ResultAsync.fromPromise(Promise.resolve({ workers: [] } as any), () => new Error("fail") as any),
+    ensureWorkspaceWorker: (_req: any) =>
+      ResultAsync.fromPromise(
+        Promise.resolve({ workerId: randomUUID(), containerName: "worker-test", secret: "test-secret", volumeName: "ws-test" }),
+        () => new Error("fail") as any,
+      ),
+    updateWorkspaceConfig: (_req: any) =>
+      ResultAsync.fromPromise(Promise.resolve({}), () => new Error("fail") as any),
+  }
+
+  const mockTSM: IToolServerManager = {
+    health: () => ResultAsync.fromPromise(Promise.resolve({ status: "ok" } as any), () => new Error("fail") as any),
+    startToolServer: (_req: any) => ResultAsync.fromPromise(Promise.resolve({} as any), () => new Error("fail") as any),
+    stopToolServer: (_type: string) => ResultAsync.fromPromise(Promise.resolve({} as any), () => new Error("fail") as any),
+    listToolServers: () => ResultAsync.fromPromise(Promise.resolve({ toolServers: [] } as any), () => new Error("fail") as any),
+    refreshToolCache: (_type: string) => ResultAsync.fromPromise(Promise.resolve({} as any), () => new Error("fail") as any),
+    resolveTools: (_sessionId: string, _types: string[]) =>
+      ResultAsync.fromPromise(
+        Promise.resolve({ tools: [], systemContext: "", toolServerUrls: [] }),
+        () => new Error("fail") as any,
+      ),
+    executeTool: (_req: any) =>
+      ResultAsync.fromPromise(
+        Promise.resolve({ resultJson: "", success: false, error: "not implemented" }),
+        () => new Error("fail") as any,
+      ),
+  }
 
   const handler = connectNodeAdapter({
-    routes: createRegistryRouter(db, podman, "localhost/openzerg/worker:latest"),
+    routes: createRegistryRouter(db, mockWM, mockTSM),
   })
 
   server = createServer(handler)
@@ -119,60 +174,39 @@ describe("registry E2E", () => {
     }
   })
 
-  test("role CRUD with hot/workspace config split", async () => {
-    const created = unwrap(await client.createRole({
-      name: "e2e-role",
-      description: "test role",
+  test("template CRUD", async () => {
+    const created = unwrap(await client.createTemplate({
+      name: "e2e-template",
+      description: "test template",
       systemPrompt: "You are a test assistant",
-      aiProxyId: "",
-      zcpServers: "[]",
-      skills: "[]",
-      extraPkgs: "[]",
-      maxSteps: 10,
     }))
-    expect(created.name).toBe("e2e-role")
-    expect(created.extraPkgs).toBe("[]")
+    expect(created.name).toBe("e2e-template")
 
-    const hot = unwrap(await client.updateRoleHotConfig({
-      id: created.id,
-      systemPrompt: "Updated hot prompt",
-      aiProxyId: "",
-      skills: "[]",
-      maxSteps: 20,
-    }))
-    expect(hot.systemPrompt).toBe("Updated hot prompt")
-    expect(hot.maxSteps).toBe(20)
+    const fetched = unwrap(await client.getTemplate(created.id))
+    expect(fetched.name).toBe("e2e-template")
 
-    const ws = unwrap(await client.updateRoleWorkspaceConfig({
+    const updated = unwrap(await client.updateTemplate({
       id: created.id,
-      name: "e2e-role",
+      name: "e2e-template-updated",
       description: "updated desc",
-      zcpServers: '[{"type":"zcp-fs"}]',
-      extraPkgs: '["ripgrep"]',
+      systemPrompt: "Updated prompt",
     }))
-    expect(ws.zcpServers).toBe('[{"type":"zcp-fs"}]')
-    expect(ws.extraPkgs).toBe('["ripgrep"]')
+    expect(updated.name).toBe("e2e-template-updated")
+    expect(updated.systemPrompt).toBe("Updated prompt")
 
-    const fetched = unwrap(await client.getRole(created.id))
-    expect(fetched.systemPrompt).toBe("Updated hot prompt")
-    expect(fetched.extraPkgs).toBe('["ripgrep"]')
-
-    const del = await client.deleteRole(created.id)
+    const del = await client.deleteTemplate(created.id)
     expect(del.isOk()).toBe(true)
   })
 
-  test("session lifecycle: create → stop → delete", async () => {
-    const role = unwrap(await client.createRole({
-      name: "session-test-role",
+  test("session lifecycle: create -> stop -> delete", async () => {
+    const tpl = unwrap(await client.createTemplate({
+      name: "session-test-tpl",
       systemPrompt: "test",
-      zcpServers: "[]",
-      skills: "[]",
-      extraPkgs: "[]",
     }))
 
     const created = unwrap(await client.createSession({
       title: "e2e session",
-      roleId: role.id,
+      templateId: tpl.id,
     }))
     expect(created.sessionId).toBeTruthy()
     expect(created.sessionToken).toBeTruthy()
@@ -184,26 +218,30 @@ describe("registry E2E", () => {
     const del = await client.deleteSession(created.sessionId)
     expect(del.isOk()).toBe(true)
 
-    await client.deleteRole(role.id)
+    await client.deleteTemplate(tpl.id)
   })
 
-  test("workspace management: list + delete", async () => {
-    const workspaces = unwrap(await client.listWorkspaces())
-    expect(Array.isArray(workspaces.workspaces)).toBe(true)
+  test("session with inline config (no template)", async () => {
+    const created = unwrap(await client.createSession({
+      title: "inline session",
+      systemPrompt: "You are inline",
+    }))
+    expect(created.sessionId).toBeTruthy()
+    expect(created.session?.systemPrompt).toBe("You are inline")
+
+    const del = await client.deleteSession(created.sessionId)
+    expect(del.isOk()).toBe(true)
   })
 
   test("message CRUD", async () => {
-    const role = unwrap(await client.createRole({
-      name: "msg-test-role",
+    const tpl = unwrap(await client.createTemplate({
+      name: "msg-test-tpl",
       systemPrompt: "test",
-      zcpServers: "[]",
-      skills: "[]",
-      extraPkgs: "[]",
     }))
 
     const session = unwrap(await client.createSession({
       title: "msg test",
-      roleId: role.id,
+      templateId: tpl.id,
     }))
 
     const msg = unwrap(await client.createMessage({
@@ -221,6 +259,74 @@ describe("registry E2E", () => {
     expect(msgs.messages[0].content).toBe("Hello E2E")
 
     await client.deleteSession(session.sessionId)
-    await client.deleteRole(role.id)
+    await client.deleteTemplate(tpl.id)
+  })
+
+  test("createSession with workspaceId reuses existing workspace", async () => {
+    const first = unwrap(await client.createSession({ title: "first session" }))
+    expect(first.session?.workspaceId).toBeTruthy()
+
+    const second = unwrap(await client.createSession({
+      title: "second session — reuse workspace",
+      workspaceId: first.session!.workspaceId,
+    }))
+    expect(second.session?.workspaceId).toBe(first.session!.workspaceId)
+
+    await client.deleteSession(second.sessionId)
+    await client.deleteSession(first.sessionId)
+  })
+
+  test("deleteSession reference counting — workspace deleted only when last session removed", async () => {
+    const first = unwrap(await client.createSession({ title: "ref-count-A" }))
+    const wsId = first.session!.workspaceId
+
+    const second = unwrap(await client.createSession({
+      title: "ref-count-B",
+      workspaceId: wsId,
+    }))
+    expect(second.session!.workspaceId).toBe(wsId)
+
+    await client.deleteSession(second.sessionId)
+
+    const fetchedA = unwrap(await client.getSession(first.sessionId))
+    expect(fetchedA.workspaceId).toBe(wsId)
+
+    await client.deleteSession(first.sessionId)
+  })
+
+  test("stopSession does not call stopWorker", async () => {
+    const beforeStopCalls = stopWorkerCalls.length
+    const session = unwrap(await client.createSession({ title: "stop-test" }))
+
+    const startResult = await client.startSession(session.sessionId)
+    expect(startResult.isOk()).toBe(true)
+
+    const stopResult = await client.stopSession(session.sessionId)
+    expect(stopResult.isOk()).toBe(true)
+
+    const fetched = unwrap(await client.getSession(session.sessionId))
+    expect(fetched.state).toBe("stopped")
+
+    expect(stopWorkerCalls.length).toBe(beforeStopCalls)
+
+    await client.deleteSession(session.sessionId)
+  })
+
+  test("deleteSession reference counting — deleteWorkspace called only for last session", async () => {
+    const beforeDeleteCalls = deleteWorkspaceCalls.length
+    const first = unwrap(await client.createSession({ title: "ref-count-A" }))
+    const wsId = first.session!.workspaceId
+
+    const second = unwrap(await client.createSession({
+      title: "ref-count-B",
+      workspaceId: wsId,
+    }))
+    expect(second.session!.workspaceId).toBe(wsId)
+
+    await client.deleteSession(second.sessionId)
+    expect(deleteWorkspaceCalls.length).toBe(beforeDeleteCalls)
+
+    await client.deleteSession(first.sessionId)
+    expect(deleteWorkspaceCalls.length).toBe(beforeDeleteCalls + 1)
   })
 })

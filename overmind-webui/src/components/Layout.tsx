@@ -27,7 +27,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: '/', labelKey: 'dashboard', icon: '📊', exact: true },
   { path: '/sessions', labelKey: 'sessions', icon: '💬' },
-  { path: '/roles', labelKey: 'roles', icon: '👤' },
+  { path: '/templates', labelKey: 'roles', icon: '📋' },
   { path: '/skills', labelKey: 'skills', icon: '🧩' },
   { path: '/instances', labelKey: 'instances', icon: '📡' },
   { path: '/workspaces', labelKey: 'workspaces', icon: '💾' },

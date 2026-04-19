@@ -10,17 +10,18 @@ import {
   RegisterRequestSchema,
   HeartbeatRequestSchema,
   ListInstancesRequestSchema,
-  ListRolesRequestSchema,
-  GetRoleRequestSchema,
-  CreateRoleRequestSchema,
-  UpdateRoleHotConfigRequestSchema,
-  UpdateRoleWorkspaceConfigRequestSchema,
-  DeleteRoleRequestSchema,
+  ListTemplatesRequestSchema,
+  GetTemplateRequestSchema,
+  CreateTemplateRequestSchema,
+  UpdateTemplateRequestSchema,
+  DeleteTemplateRequestSchema,
   ListSessionsRequestSchema,
   GetSessionRequestSchema,
   CreateSessionRequestSchema,
   UpdateSessionMetaRequestSchema,
-  SwitchSessionRoleRequestSchema,
+  UpdateSessionHotConfigRequestSchema,
+  UpdateSessionColdConfigRequestSchema,
+  SwitchSessionTemplateRequestSchema,
   DeleteSessionRequestSchema,
   StartSessionRequestSchema,
   StopSessionRequestSchema,
@@ -28,13 +29,11 @@ import {
   ListMessagesRequestSchema,
   CreateMessageRequestSchema,
   DeleteMessagesFromRequestSchema,
-  ListWorkspacesRequestSchema,
-  DeleteWorkspaceRequestSchema,
   type LoginResponse,
   type RegisterResponse,
   type ListInstancesResponse,
-  type RoleInfo,
-  type ListRolesResponse,
+  type TemplateInfo,
+  type ListTemplatesResponse,
   type ListSessionsResponse,
   type SessionInfo,
   type CreateSessionResponse,
@@ -43,11 +42,13 @@ import {
   type CreateMessageResponse,
   type DeleteMessagesFromResponse,
   type DeleteSessionResponse,
-  type DeleteRoleResponse,
+  type DeleteTemplateResponse,
   type StartSessionResponse,
   type StopSessionResponse,
-  type ListWorkspacesResponse,
-  type DeleteWorkspaceResponse,
+
+  type ProviderConfig,
+  type ToolServerEntry,
+  type SkillRef,
 } from "../../generated/ts/gen/registry/v1_pb.js"
 import { BaseClient, type ClientOptions } from "./common.js"
 import type { AppError } from "./errors.js"
@@ -95,77 +96,70 @@ export class RegistryClient extends BaseClient {
     )
   }
 
-  // ── Role CRUD ─────────────────────────────────────────────────────────
+  // ── Template CRUD ─────────────────────────────────────────────────────
 
-  listRoles(): ResultAsync<ListRolesResponse, AppError> {
+  listTemplates(): ResultAsync<ListTemplatesResponse, AppError> {
     return ResultAsync.fromPromise(
-      this.client.listRoles(create(EmptySchema, {})),
+      this.client.listTemplates(create(EmptySchema, {})),
       toAppError,
     )
   }
 
-  getRole(roleId: string): ResultAsync<RoleInfo, AppError> {
+  getTemplate(templateId: string): ResultAsync<TemplateInfo, AppError> {
     return ResultAsync.fromPromise(
-      this.client.getRole(create(GetRoleRequestSchema, { roleId })),
+      this.client.getTemplate(create(GetTemplateRequestSchema, { templateId })),
       toAppError,
     )
   }
 
-  createRole(req: {
+  createTemplate(req: {
     name: string; description?: string; systemPrompt?: string
-    aiProxyId?: string; zcpServers?: string; skills?: string
-    extraPkgs?: string; maxSteps?: number
-  }): ResultAsync<RoleInfo, AppError> {
+    providerConfig?: ProviderConfig
+    toolServerConfig?: ToolServerEntry[]
+    skillConfig?: SkillRef[]
+    extraPackage?: string[]
+  }): ResultAsync<TemplateInfo, AppError> {
+    const defaults = { upstream: "", apiKey: "", modelId: "", maxTokens: 0, contextLength: 0, autoCompactLength: 0 }
     return ResultAsync.fromPromise(
-      this.client.createRole(create(CreateRoleRequestSchema, {
+      this.client.createTemplate(create(CreateTemplateRequestSchema, {
         name: req.name,
         description: req.description ?? "",
         systemPrompt: req.systemPrompt ?? "",
-        aiProxyId: req.aiProxyId ?? "",
-        zcpServers: req.zcpServers ?? "",
-        skills: req.skills ?? "",
-        extraPkgs: req.extraPkgs ?? "",
-        maxSteps: req.maxSteps ?? 0,
+        providerConfig: req.providerConfig ?? defaults,
+        toolServerConfig: req.toolServerConfig ?? [],
+        skillConfig: req.skillConfig ?? [],
+        extraPackage: req.extraPackage ?? [],
       })),
       toAppError,
     )
   }
 
-  updateRoleHotConfig(req: {
-    id: string; systemPrompt?: string; aiProxyId?: string
-    skills?: string; maxSteps?: number
-  }): ResultAsync<RoleInfo, AppError> {
+  updateTemplate(req: {
+    id: string; name?: string; description?: string; systemPrompt?: string
+    providerConfig?: ProviderConfig
+    toolServerConfig?: ToolServerEntry[]
+    skillConfig?: SkillRef[]
+    extraPackage?: string[]
+  }): ResultAsync<TemplateInfo, AppError> {
+    const defaults = { upstream: "", apiKey: "", modelId: "", maxTokens: 0, contextLength: 0, autoCompactLength: 0 }
     return ResultAsync.fromPromise(
-      this.client.updateRoleHotConfig(create(UpdateRoleHotConfigRequestSchema, {
-        id: req.id,
-        systemPrompt: req.systemPrompt ?? "",
-        aiProxyId: req.aiProxyId ?? "",
-        skills: req.skills ?? "",
-        maxSteps: req.maxSteps ?? 0,
-      })),
-      toAppError,
-    )
-  }
-
-  updateRoleWorkspaceConfig(req: {
-    id: string; name?: string; description?: string
-    zcpServers?: string; extraPkgs?: string
-  }): ResultAsync<RoleInfo, AppError> {
-    return ResultAsync.fromPromise(
-      this.client.updateRoleWorkspaceConfig(create(UpdateRoleWorkspaceConfigRequestSchema, {
+      this.client.updateTemplate(create(UpdateTemplateRequestSchema, {
         id: req.id,
         name: req.name ?? "",
         description: req.description ?? "",
-        zcpServers: req.zcpServers ?? "",
-        extraPkgs: req.extraPkgs ?? "",
+        systemPrompt: req.systemPrompt ?? "",
+        providerConfig: req.providerConfig ?? defaults,
+        toolServerConfig: req.toolServerConfig ?? [],
+        skillConfig: req.skillConfig ?? [],
+        extraPackage: req.extraPackage ?? [],
       })),
       toAppError,
     )
   }
 
-  deleteRole(roleId: string): ResultAsync<DeleteRoleResponse, AppError> {
+  deleteTemplate(templateId: string): ResultAsync<DeleteTemplateResponse, AppError> {
     return ResultAsync.fromPromise(
-      this.client.deleteRole(create(DeleteRoleRequestSchema, { roleId })),
+      this.client.deleteTemplate(create(DeleteTemplateRequestSchema, { templateId })),
       toAppError,
     )
   }
@@ -187,12 +181,26 @@ export class RegistryClient extends BaseClient {
   }
 
   createSession(req: {
-    title: string; roleId: string
+    title: string
+    templateId?: string
+    systemPrompt?: string
+    providerConfig?: ProviderConfig
+    toolServerConfig?: ToolServerEntry[]
+    skillConfig?: SkillRef[]
+    extraPackage?: string[]
+    workspaceId?: string
   }): ResultAsync<CreateSessionResponse, AppError> {
+    const defaults = { upstream: "", apiKey: "", modelId: "", maxTokens: 0, contextLength: 0, autoCompactLength: 0 }
     return ResultAsync.fromPromise(
       this.client.createSession(create(CreateSessionRequestSchema, {
         title: req.title,
-        roleId: req.roleId,
+        templateId: req.templateId ?? "",
+        systemPrompt: req.systemPrompt ?? "",
+        providerConfig: req.providerConfig ?? defaults,
+        toolServerConfig: req.toolServerConfig ?? [],
+        skillConfig: req.skillConfig ?? [],
+        extraPackage: req.extraPackage ?? [],
+        workspaceId: req.workspaceId ?? "",
       })),
       toAppError,
     )
@@ -210,13 +218,42 @@ export class RegistryClient extends BaseClient {
     )
   }
 
-  switchSessionRole(req: {
-    sessionId: string; roleId: string
+  updateSessionHotConfig(req: {
+    sessionId: string; systemPrompt?: string
+    providerConfig?: ProviderConfig; skillConfig?: SkillRef[]
+  }): ResultAsync<SessionInfo, AppError> {
+    const defaults = { upstream: "", apiKey: "", modelId: "", maxTokens: 0, contextLength: 0, autoCompactLength: 0 }
+    return ResultAsync.fromPromise(
+      this.client.updateSessionHotConfig(create(UpdateSessionHotConfigRequestSchema, {
+        sessionId: req.sessionId,
+        systemPrompt: req.systemPrompt ?? "",
+        providerConfig: req.providerConfig ?? defaults,
+        skillConfig: req.skillConfig ?? [],
+      })),
+      toAppError,
+    )
+  }
+
+  updateSessionColdConfig(req: {
+    sessionId: string; toolServerConfig?: ToolServerEntry[]; extraPackage?: string[]
   }): ResultAsync<SessionInfo, AppError> {
     return ResultAsync.fromPromise(
-      this.client.switchSessionRole(create(SwitchSessionRoleRequestSchema, {
+      this.client.updateSessionColdConfig(create(UpdateSessionColdConfigRequestSchema, {
         sessionId: req.sessionId,
-        roleId: req.roleId,
+        toolServerConfig: req.toolServerConfig ?? [],
+        extraPackage: req.extraPackage ?? [],
+      })),
+      toAppError,
+    )
+  }
+
+  switchSessionTemplate(req: {
+    sessionId: string; templateId: string
+  }): ResultAsync<SessionInfo, AppError> {
+    return ResultAsync.fromPromise(
+      this.client.switchSessionTemplate(create(SwitchSessionTemplateRequestSchema, {
+        sessionId: req.sessionId,
+        templateId: req.templateId,
       })),
       toAppError,
     )
@@ -291,19 +328,4 @@ export class RegistryClient extends BaseClient {
     )
   }
 
-  // ── Workspace Management ────────────────────────────────────────────────
-
-  listWorkspaces(): ResultAsync<ListWorkspacesResponse, AppError> {
-    return ResultAsync.fromPromise(
-      this.client.listWorkspaces({}),
-      toAppError,
-    )
-  }
-
-  deleteWorkspace(workspaceId: string): ResultAsync<DeleteWorkspaceResponse, AppError> {
-    return ResultAsync.fromPromise(
-      this.client.deleteWorkspace(create(DeleteWorkspaceRequestSchema, { workspaceId })),
-      toAppError,
-    )
-  }
 }

@@ -1,8 +1,9 @@
 import { createClient } from "@connectrpc/connect"
 import type { Client } from "@connectrpc/connect"
 import { create } from "@bufbuild/protobuf"
+import { EmptySchema } from "@bufbuild/protobuf/wkt"
 import { ResultAsync } from "neverthrow"
-import { toAppError } from "./errors.js"
+import { toAppError, type AppError } from "./errors.js"
 import {
   WorkerService,
   ExecRequestSchema,
@@ -10,11 +11,14 @@ import {
   ReadFileRequestSchema,
   WriteFileRequestSchema,
   StatRequestSchema,
+  InstallPackagesRequestSchema,
   type ExecResponse,
   type SpawnResponse,
   type ReadFileResponse,
   type WriteFileResponse,
   type StatResponse,
+  type InstallPackagesResponse,
+  type HealthResponse,
 } from "../../generated/ts/gen/worker/v1_pb.js"
 import { BaseClient, type ClientOptions } from "./common.js"
 
@@ -81,6 +85,20 @@ export class WorkerClient extends BaseClient {
   stat(path: string) {
     return ResultAsync.fromPromise(
       this.client.stat(create(StatRequestSchema, { path })),
+      toAppError,
+    )
+  }
+
+  installPackages(packages: string[]) {
+    return ResultAsync.fromPromise(
+      this.client.installPackages(create(InstallPackagesRequestSchema, { packages })),
+      toAppError,
+    )
+  }
+
+  health(): ResultAsync<HealthResponse, AppError> {
+    return ResultAsync.fromPromise(
+      this.client.health(create(EmptySchema, {})),
       toAppError,
     )
   }

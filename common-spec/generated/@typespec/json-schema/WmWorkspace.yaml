@@ -1,0 +1,37 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: WmWorkspace.yaml
+type: object
+properties:
+  id:
+    type: string
+  volumeName:
+    type: string
+  state:
+    type: string
+  createdBySessionId:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+  workerPodName:
+    type: string
+  skillSlugs:
+    type: string
+  nixPkgs:
+    type: string
+required:
+  - id
+  - volumeName
+  - state
+  - createdBySessionId
+  - createdAt
+  - updatedAt
+  - workerPodName
+  - skillSlugs
+  - nixPkgs
+x-indexes:
+  - - state
+  - - createdBySessionId
+x-primary-key: id
+x-table: wm_workspaces

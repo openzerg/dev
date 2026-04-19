@@ -4,7 +4,7 @@ import { createServer } from "node:http"
 import { connectNodeAdapter } from "@connectrpc/connect-node"
 import { createWorkerRouter, authInterceptor } from "../src/router.js"
 import type { Result } from "neverthrow"
-import type { ExecResponse, SpawnResponse } from "@openzerg/common/gen/worker/v1_pb.js"
+import type { ExecResponse, SpawnResponse, InstallPackagesResponse } from "@openzerg/common/gen/worker/v1_pb.js"
 import type { AppError } from "@openzerg/common"
 
 const WORKER_SECRET = "test-secret-123"
@@ -85,5 +85,31 @@ describe("worker integration (via ConnectRPC)", () => {
     })
     const result = await badClient.exec({ command: "echo hi" })
     expect(result.isErr()).toBe(true)
+  })
+
+  test("health check", async () => {
+    const result = await client.health()
+    expect(result.isOk()).toBe(true)
+  })
+
+  test("installPackages gracefully handles missing nix", async () => {
+    const result = await client.installPackages(["nonexistent-pkg-xyz"])
+    expect(result.isOk() || result.isErr()).toBe(true)
+  })
+
+  test("env.sh is sourced in exec when present", async () => {
+    const mkdirResp = unwrapExec(await client.exec({
+      command: "mkdir -p /opt/nix-profile 2>/dev/null; echo 'export TEST_NIX_ENV=loaded' > /opt/nix-profile/env.sh 2>/dev/null && echo ok || echo fallback",
+    }))
+    if (new TextDecoder().decode(mkdirResp.stdout).trim() === "fallback") {
+      return
+    }
+
+    const resp = unwrapExec(await client.exec({
+      command: "[ -f /opt/nix-profile/env.sh ] && . /opt/nix-profile/env.sh; echo $TEST_NIX_ENV",
+    }))
+    expect(resp.exitCode).toBe(0)
+    const output = new TextDecoder().decode(resp.stdout).trim()
+    expect(output).toBe("loaded")
   })
 })

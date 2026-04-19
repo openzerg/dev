@@ -5,6 +5,12 @@ import { createProxyService, type ProxyJoined } from "../service/proxy.js"
 import { createProviderModelConfigService } from "../service/provider-model-config.js"
 import { createLogsService } from "../service/logs.js"
 import { getProviders, getFlatModelsForProvider } from "../providers.js"
+import type { ProviderModelConfig } from "../entities/index.js"
+
+interface OpenAIChatResponse {
+  choices?: Array<{ message?: { content?: string } }>
+  error?: { message?: string }
+}
 
 export function createRouter(db: DB) {
   const proxySvc  = createProxyService(db)
@@ -182,14 +188,15 @@ export function createRouter(db: DB) {
               max_tokens: 32,
             }),
           })
-          const json = await resp.json() as any
+          const json = await resp.json() as OpenAIChatResponse
           const latencyMs = Date.now() - start
           if (resp.ok && json.choices?.[0]?.message?.content) {
             return { success: true, message: json.choices[0].message.content, statusCode: resp.status, latencyMs }
           }
           return { success: false, message: json.error?.message || JSON.stringify(json).slice(0, 200), statusCode: resp.status, latencyMs }
-        } catch (e: any) {
-          return { success: false, message: e.message || String(e), statusCode: 0, latencyMs: Date.now() - start }
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e)
+          return { success: false, message: msg, statusCode: 0, latencyMs: Date.now() - start }
         }
       },
 
@@ -211,7 +218,7 @@ export function createRouter(db: DB) {
         if (!row.enabled) return { success: false, message: "Proxy is disabled", statusCode: 0, latencyMs: 0 }
         if (!row.upstream) return { success: false, message: "No upstream URL", statusCode: 0, latencyMs: 0 }
 
-        const apiKey = (row as any).upstreamApiKey as string
+        const apiKey = row.upstreamApiKey
         const start = Date.now()
         try {
           const resp = await fetch(`${row.upstream}/chat/completions`, {
@@ -223,14 +230,15 @@ export function createRouter(db: DB) {
               max_tokens: 32,
             }),
           })
-          const json = await resp.json() as any
+          const json = await resp.json() as OpenAIChatResponse
           const latencyMs = Date.now() - start
           if (resp.ok && json.choices?.[0]?.message?.content) {
             return { success: true, message: json.choices[0].message.content, statusCode: resp.status, latencyMs }
           }
           return { success: false, message: json.error?.message || JSON.stringify(json).slice(0, 200), statusCode: resp.status, latencyMs }
-        } catch (e: any) {
-          return { success: false, message: e.message || String(e), statusCode: 0, latencyMs: Date.now() - start }
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e)
+          return { success: false, message: msg, statusCode: 0, latencyMs: Date.now() - start }
         }
       },
     })
@@ -262,7 +270,7 @@ function toProxyInfo(p: ProxyJoined) {
   }
 }
 
-function toConfigInfo(c: any) {
+function toConfigInfo(c: ProviderModelConfig) {
   return {
     id:                c.id,
     providerId:        c.providerId,

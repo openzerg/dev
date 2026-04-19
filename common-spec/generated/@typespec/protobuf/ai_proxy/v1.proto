@@ -168,6 +168,28 @@ message ListProviderModelsResponse {
   repeated ProviderModelInfo models = 1;
 }
 
+message TestProviderModelConfigRequest {
+  string id = 1;
+}
+
+message TestProviderModelConfigResponse {
+  bool success = 1;
+  string message = 2;
+  int32 statusCode = 3;
+  int32 latencyMs = 4;
+}
+
+message TestProxyRequest {
+  string id = 1;
+}
+
+message TestProxyResponse {
+  bool success = 1;
+  string message = 2;
+  int32 statusCode = 3;
+  int32 latencyMs = 4;
+}
+
 message QueryLogsRequest {
   string proxyId = 1;
   int64 fromTs = 2;
@@ -224,6 +246,8 @@ service AiProxyService {
   rpc DeleteProviderModelConfig(DeleteProviderModelConfigRequest) returns (DeleteProviderModelConfigResponse);
   rpc ListProviders(google.protobuf.Empty) returns (ListProvidersResponse);
   rpc ListProviderModels(ListProviderModelsRequest) returns (ListProviderModelsResponse);
+  rpc TestProviderModelConfig(TestProviderModelConfigRequest) returns (TestProviderModelConfigResponse);
+  rpc TestProxy(TestProxyRequest) returns (TestProxyResponse);
   rpc QueryLogs(QueryLogsRequest) returns (QueryLogsResponse);
   rpc GetTokenStats(GetTokenStatsRequest) returns (TokenStatsResponse);
 }

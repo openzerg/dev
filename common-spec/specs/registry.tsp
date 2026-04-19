@@ -3,10 +3,32 @@ import "@typespec/protobuf";
 using Protobuf;
 
 /**
- * RegistryService — 注册中心 + 鉴权 + Session 管理 + Role 管理 + Workspace 管理
+ * RegistryService — 注册中心 + 鉴权 + Session 管理 + Template 管理
  */
 @package({ name: "registry.v1" })
 namespace RegistryV1 {
+
+  // ── ZSP Sub-Models ──────────────────────────────────────────────────────
+
+  @message model ProviderConfig {
+    @field(1) upstream:          string;
+    @field(2) apiKey:            string;
+    @field(3) modelId:           string;
+    @field(4) maxTokens:         int32;
+    @field(5) contextLength:     int32;
+    @field(6) autoCompactLength: int32;
+  }
+
+  @message model ToolServerEntry {
+    @field(1) type:   string;
+    @field(2) config: Map<string, string>;
+  }
+
+  @message model SkillRef {
+    @field(1) slug: string;
+  }
+
+  @message model WorkspaceConfig {}
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
@@ -59,82 +81,87 @@ namespace RegistryV1 {
     @field(1) instances: InstanceInfo[];
   }
 
-  // ── Role ──────────────────────────────────────────────────────────────────
+  // ── Template CRUD ────────────────────────────────────────────────────────
 
-  @message model RoleInfo {
-    @field(1)  id:              string;
-    @field(2)  name:            string;
-    @field(3)  description:     string;
-    @field(4)  systemPrompt:    string;
-    @field(5)  aiProxyId:       string;
-    @field(6)  zcpServers:      string;
-    @field(7)  skills:          string;
-    @field(8)  maxSteps:        int32;
-    @field(9)  extraPkgs:       string;
-    @field(10) createdAt:       int64;
-    @field(11) updatedAt:       int64;
+  @message model TemplateInfo {
+    @field(1)  id:                string;
+    @field(2)  name:              string;
+    @field(3)  description:       string;
+    @field(4)  systemPrompt:      string;
+    @field(5)  providerConfig:    ProviderConfig;
+    @field(6)  toolServerConfig:   ToolServerEntry[];
+    @field(7)  skillConfig:       SkillRef[];
+    @field(8)  workspaceConfig:   WorkspaceConfig;
+    @field(9)  extraPackage:      string[];
+    @field(10) createdAt:         int64;
+    @field(11) updatedAt:         int64;
   }
 
-  @message model ListRolesRequest {}
+  @message model ListTemplatesRequest {}
 
-  @message model ListRolesResponse {
-    @field(1) roles: RoleInfo[];
+  @message model ListTemplatesResponse {
+    @field(1) templates: TemplateInfo[];
   }
 
-  @message model GetRoleRequest {
-    @field(1) roleId: string;
+  @message model GetTemplateRequest {
+    @field(1) templateId: string;
   }
 
-  @message model CreateRoleRequest {
-    @field(1)  name:            string;
-    @field(2)  description:     string;
-    @field(3)  systemPrompt:    string;
-    @field(4)  aiProxyId:       string;
-    @field(5)  zcpServers:      string;
-    @field(6)  maxSteps:        int32;
-    @field(7)  skills:          string;
-    @field(8)  extraPkgs:       string;
+  @message model CreateTemplateRequest {
+    @field(1)  name:              string;
+    @field(2)  description:       string;
+    @field(3)  systemPrompt:      string;
+    @field(4)  providerConfig:    ProviderConfig;
+    @field(5)  toolServerConfig:   ToolServerEntry[];
+    @field(6)  skillConfig:       SkillRef[];
+    @field(7)  workspaceConfig:   WorkspaceConfig;
+    @field(8)  extraPackage:      string[];
   }
 
-  @message model UpdateRoleHotConfigRequest {
-    @field(1)  id:              string;
-    @field(2)  systemPrompt:    string;
-    @field(3)  aiProxyId:       string;
-    @field(4)  skills:          string;
-    @field(5)  maxSteps:        int32;
+  @message model UpdateTemplateRequest {
+    @field(1)  id:                string;
+    @field(2)  name:              string;
+    @field(3)  description:       string;
+    @field(4)  systemPrompt:      string;
+    @field(5)  providerConfig:    ProviderConfig;
+    @field(6)  toolServerConfig:   ToolServerEntry[];
+    @field(7)  skillConfig:       SkillRef[];
+    @field(8)  workspaceConfig:   WorkspaceConfig;
+    @field(9)  extraPackage:      string[];
   }
 
-  @message model UpdateRoleWorkspaceConfigRequest {
-    @field(1)  id:              string;
-    @field(2)  name:            string;
-    @field(3)  description:     string;
-    @field(4)  zcpServers:      string;
-    @field(5)  extraPkgs:       string;
+  @message model DeleteTemplateRequest {
+    @field(1) templateId: string;
   }
 
-  @message model DeleteRoleRequest {
-    @field(1) roleId: string;
-  }
-
-  @message model DeleteRoleResponse {}
+  @message model DeleteTemplateResponse {}
 
   // ── Session ──────────────────────────────────────────────────────────────
 
   @message model SessionInfo {
-    @field(1)  sessionId:     string;
-    @field(2)  title:         string;
-    @field(3)  roleId:        string;
-    @field(4)  roleName:      string;
-    @field(5)  workerId:      string;
-    @field(6)  workerName:    string;
-    @field(7)  agentId:       string;
-    @field(8)  sessionToken:  string;
-    @field(9)  state:         string;
-    @field(10) inputTokens:   int64;
-    @field(11) outputTokens:  int64;
-    @field(12) createdAt:     int64;
-    @field(13) updatedAt:     int64;
-    @field(14) workspaceId:   string;
+    @field(1)  sessionId:        string;
+    @field(2)  title:            string;
+    @field(3)  state:            string;
+    @field(4)  templateId:       string;
+    @field(5)  createdAt:        int64;
+    @field(6)  updatedAt:        int64;
+
+    // ZSP snapshot
+    @field(7)  systemPrompt:     string;
+    @field(8)  providerConfig:   ProviderConfig;
+    @field(9)  toolServerConfig:  ToolServerEntry[];
+    @field(10) skillConfig:      SkillRef[];
+    @field(11) workspaceConfig:  WorkspaceConfig;
+    @field(12) extraPackage:     string[];
+
+    // Infrastructure
+    @field(13) workerId:         string;
+    @field(14) agentId:          string;
+    @field(15) sessionToken:     string;
+    @field(16) workspaceId:      string;
+    @field(17) inputTokens:      int64;
+    @field(18) outputTokens:     int64;
+    @field(19) lastActiveAt:     int64;
   }
 
   @message model ListSessionsRequest {
@@ -149,9 +176,25 @@ namespace RegistryV1 {
     @field(1) sessionId: string;
   }
 
+  /**
+   * CreateSessionRequest — ZSP 协议入口。
+   *
+   * 方式 A (纯模板):     { title, templateId }
+   * 方式 B (模板+覆盖):  { title, templateId, systemPrompt: "..." }
+   * 方式 C (纯内联):     { title, systemPrompt: "...", providerConfig: {...}, ... }
+   *
+   * 合并: result = request.field || template.field || default
+   */
   @message model CreateSessionRequest {
-    @field(1) title:    string;
-    @field(2) roleId:   string;
+    @field(1)  title:             string;
+    @field(2)  templateId:        string;
+    @field(3)  systemPrompt:      string;
+    @field(4)  providerConfig:    ProviderConfig;
+    @field(5)  toolServerConfig:   ToolServerEntry[];
+    @field(6)  skillConfig:       SkillRef[];
+    @field(7)  workspaceConfig:   WorkspaceConfig;
+    @field(8)  extraPackage:      string[];
+    @field(9)  workspaceId:       string;
   }
 
   @message model CreateSessionResponse {
@@ -165,9 +208,22 @@ namespace RegistryV1 {
     @field(2) title:     string;
   }
 
-  @message model SwitchSessionRoleRequest {
-    @field(1) sessionId: string;
-    @field(2) roleId:    string;
+  @message model UpdateSessionHotConfigRequest {
+    @field(1) sessionId:        string;
+    @field(2) systemPrompt:     string;
+    @field(3) providerConfig:   ProviderConfig;
+    @field(4) skillConfig:      SkillRef[];
+  }
+
+  @message model UpdateSessionColdConfigRequest {
+    @field(1) sessionId:       string;
+    @field(2) toolServerConfig: ToolServerEntry[];
+    @field(3) extraPackage:    string[];
+  }
+
+  @message model SwitchSessionTemplateRequest {
+    @field(1) sessionId:   string;
+    @field(2) templateId:  string;
   }
 
   @message model DeleteSessionRequest {
@@ -193,19 +249,23 @@ namespace RegistryV1 {
   }
 
   @message model ResolveSessionResponse {
-    @field(1)  sessionId:     string;
-    @field(2)  roleId:        string;
-    @field(3)  roleInfo:      RoleInfo;
-    @field(4)  workerId:      string;
-    @field(5)  workerUrl:     string;
-    @field(6)  workerSecret:  string;
-    @field(7)  workspaceRoot: string;
-    @field(8)  agentUrl:      string;
-    @field(9)  zcpServerUrls: ZcpServerUrl[];
-    @field(10) workspaceId:   string;
+    @field(1)  sessionId:       string;
+    @field(2)  templateId:      string;
+    @field(3)  systemPrompt:    string;
+    @field(4)  providerConfig:  ProviderConfig;
+    @field(5)  toolServerConfig: ToolServerEntry[];
+    @field(6)  skillConfig:     SkillRef[];
+    @field(7)  extraPackage:    string[];
+    @field(8)  workerId:        string;
+    @field(9)  workerUrl:       string;
+    @field(10) workerSecret:    string;
+    @field(11) workspaceRoot:   string;
+    @field(12) agentUrl:        string;
+    @field(13) toolServerUrls:   ToolServerUrl[];
+    @field(14) workspaceId:     string;
   }
 
-  @message model ZcpServerUrl {
+  @message model ToolServerUrl {
     @field(1) name:   string;
     @field(2) url:    string;
     @field(3) config: string;
@@ -261,28 +321,6 @@ namespace RegistryV1 {
 
   @message model DeleteMessagesFromResponse {}
 
-  // ── Workspace Management ─────────────────────────────────────────────────
-
-  @message model WorkspaceInfo {
-    @field(1) workspaceId:    string;
-    @field(2) volumeName:     string;
-    @field(3) state:          string;
-    @field(4) boundSessionId: string;
-    @field(5) createdAt:      int64;
-  }
-
-  @message model ListWorkspacesRequest {}
-
-  @message model ListWorkspacesResponse {
-    @field(1) workspaces: WorkspaceInfo[];
-  }
-
-  @message model DeleteWorkspaceRequest {
-    @field(1) workspaceId: string;
-  }
-
-  @message model DeleteWorkspaceResponse {}
-
   // ── Service ──────────────────────────────────────────────────────────────
 
   @Protobuf.service
@@ -295,20 +333,21 @@ namespace RegistryV1 {
     heartbeat(...HeartbeatRequest): HeartbeatResponse;
     listInstances(...ListInstancesRequest): ListInstancesResponse;
 
-    // Role CRUD
-    listRoles(...ListRolesRequest): ListRolesResponse;
-    getRole(...GetRoleRequest): RoleInfo;
-    createRole(...CreateRoleRequest): RoleInfo;
-    updateRoleHotConfig(...UpdateRoleHotConfigRequest): RoleInfo;
-    updateRoleWorkspaceConfig(...UpdateRoleWorkspaceConfigRequest): RoleInfo;
-    deleteRole(...DeleteRoleRequest): DeleteRoleResponse;
+    // Template CRUD
+    listTemplates(...ListTemplatesRequest): ListTemplatesResponse;
+    getTemplate(...GetTemplateRequest): TemplateInfo;
+    createTemplate(...CreateTemplateRequest): TemplateInfo;
+    updateTemplate(...UpdateTemplateRequest): TemplateInfo;
+    deleteTemplate(...DeleteTemplateRequest): DeleteTemplateResponse;
 
     // Session CRUD + Lifecycle
     listSessions(...ListSessionsRequest): ListSessionsResponse;
     getSession(...GetSessionRequest): SessionInfo;
     createSession(...CreateSessionRequest): CreateSessionResponse;
     updateSessionMeta(...UpdateSessionMetaRequest): SessionInfo;
-    switchSessionRole(...SwitchSessionRoleRequest): SessionInfo;
+    updateSessionHotConfig(...UpdateSessionHotConfigRequest): SessionInfo;
+    updateSessionColdConfig(...UpdateSessionColdConfigRequest): SessionInfo;
+    switchSessionTemplate(...SwitchSessionTemplateRequest): SessionInfo;
     deleteSession(...DeleteSessionRequest): DeleteSessionResponse;
     startSession(...StartSessionRequest): StartSessionResponse;
     stopSession(...StopSessionRequest): StopSessionResponse;
@@ -318,9 +357,5 @@ namespace RegistryV1 {
     listMessages(...ListMessagesRequest): ListMessagesResponse;
     createMessage(...CreateMessageRequest): CreateMessageResponse;
     deleteMessagesFrom(...DeleteMessagesFromRequest): DeleteMessagesFromResponse;
-
-    // Workspace Management
-    listWorkspaces(...ListWorkspacesRequest): ListWorkspacesResponse;
-    deleteWorkspace(...DeleteWorkspaceRequest): DeleteWorkspaceResponse;
   }
 }

@@ -2,87 +2,93 @@ import { ConnectError, Code } from "@connectrpc/connect"
 import { randomUUID, now, dbQuery, unwrap } from "./common.js"
 import type { DB } from "../db.js"
 import type { Session } from "@openzerg/common/entities/session-schema.js"
-import type { Workspace } from "@openzerg/common/entities/workspace-schema.js"
-import type { Role } from "@openzerg/common/entities/role-schema.js"
-import { roleRowToInfo } from "./role.js"
-import type { PodmanClient } from "../podman/client.js"
+import type { SessionTemplate } from "@openzerg/common/entities/sessiontemplate-schema.js"
+import type {
+  IWorkspaceManager,
+  IToolServerManager,
+} from "@openzerg/common"
 import type {
   ListSessionsRequest, GetSessionRequest, CreateSessionRequest,
-  UpdateSessionMetaRequest, SwitchSessionRoleRequest, DeleteSessionRequest,
-  StartSessionRequest, StopSessionRequest, ResolveSessionRequest,
+  UpdateSessionMetaRequest, UpdateSessionHotConfigRequest,
+  UpdateSessionColdConfigRequest, SwitchSessionTemplateRequest,
+  DeleteSessionRequest, StartSessionRequest, StopSessionRequest,
+  ResolveSessionRequest,
 } from "@openzerg/common/gen/registry/v1_pb.js"
-
-async function buildSessionInfo(db: DB, s: Session) {
-  const role = s.roleId
-    ? await db.selectFrom("registry_roles").select(["name"]).where("id", "=", s.roleId).executeTakeFirst()
-    : undefined
-  const worker = s.workerId
-    ? await db.selectFrom("registry_workers").select(["name"]).where("id", "=", s.workerId).executeTakeFirst()
-    : undefined
-  return {
-    sessionId: s.id, title: s.title, roleId: s.roleId,
-    roleName: role?.name ?? "", workerId: s.workerId,
-    workerName: worker?.name ?? "", agentId: s.agentId,
-    sessionToken: s.sessionToken, state: s.state,
-    inputTokens: s.inputTokens, outputTokens: s.outputTokens,
-    createdAt: s.createdAt, updatedAt: s.updatedAt,
-    workspaceId: s.workspaceId,
-  }
-}
-
-interface ZcpServerEntry {
-  type: string
-  config?: Record<string, string>
-}
 
 function safeParseJson(raw: string): unknown {
   try { return JSON.parse(raw) } catch { return null }
 }
 
-function parseZcpServers(zcpServersJson: string): ZcpServerEntry[] {
-  const parsed = safeParseJson(zcpServersJson || "[]")
-  if (!Array.isArray(parsed)) return []
-  return parsed.map((p: unknown) => {
-    if (typeof p === "string") return { type: p }
-    const obj = p as Record<string, unknown>
-    return { type: String(obj.type ?? ""), config: obj.config as Record<string, string> | undefined }
-  }).filter((e: ZcpServerEntry) => e.type)
-}
-
-async function resolveZcpServerUrls(db: DB, entries: ZcpServerEntry[]) {
-  if (entries.length === 0) return []
-  const serverTypes = entries.map(e => e.type)
-  const instances = await db.selectFrom("registry_instances").selectAll()
-    .where("instanceType", "in", serverTypes)
-    .where("lifecycle", "=", "active")
-    .execute()
-  const seen = new Set<string>()
-  const configMap = new Map(entries.map(e => [e.type, e.config ?? {}]))
-  const result: Array<{ name: string; url: string; config: string }> = []
-  for (const inst of instances) {
-    if (seen.has(inst.instanceType)) continue
-    seen.add(inst.instanceType)
-    result.push({
-      name: inst.instanceType,
-      url: inst.publicUrl,
-      config: JSON.stringify(configMap.get(inst.instanceType) ?? {}),
-    })
+function sessionToInfo(s: Session) {
+  const toolEntries = (safeParseJson(s.toolServers || "[]") ?? []) as Array<{ type: string; config?: Record<string, string> }>
+  const skillRefs = (safeParseJson(s.skills || "[]") ?? []) as Array<{ slug: string }>
+  const extraPkgs = (safeParseJson(s.extraPkgs || "[]") ?? []) as string[]
+  return {
+    sessionId: s.id, title: s.title, state: s.state,
+    templateId: s.templateId,
+    createdAt: s.createdAt, updatedAt: s.updatedAt,
+    systemPrompt: s.systemPrompt,
+    providerConfig: {
+      upstream: s.upstream, apiKey: s.apiKey, modelId: s.modelId,
+      maxTokens: s.maxTokens, contextLength: s.contextLength,
+      autoCompactLength: s.autoCompactLength,
+    },
+    toolServerConfig: toolEntries.map(e => ({ type: e.type, config: e.config ?? {} })),
+    skillConfig: skillRefs.map(sr => ({ slug: sr.slug })),
+    extraPackage: extraPkgs,
+    workerId: s.workerId, agentId: s.agentId,
+    sessionToken: s.sessionToken, workspaceId: s.workspaceId,
+    inputTokens: s.inputTokens, outputTokens: s.outputTokens,
+    lastActiveAt: s.lastActiveAt,
   }
-  return result
 }
 
-export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImage: string) {
+interface SnapshotFields {
+  systemPrompt: string
+  upstream: string
+  apiKey: string
+  modelId: string
+  maxTokens: number
+  contextLength: number
+  autoCompactLength: number
+  toolServers: string
+  skills: string
+  extraPkgs: string
+}
+
+function templateToSnapshot(t: SessionTemplate): SnapshotFields {
+  return {
+    systemPrompt: t.systemPrompt,
+    upstream: t.upstream, apiKey: t.apiKey, modelId: t.modelId,
+    maxTokens: t.maxTokens, contextLength: t.contextLength,
+    autoCompactLength: t.autoCompactLength,
+    toolServers: t.toolServers, skills: t.skills, extraPkgs: t.extraPkgs,
+  }
+}
+
+function applyOverrides(snapshot: SnapshotFields, req: CreateSessionRequest): SnapshotFields {
+  return {
+    systemPrompt: req.systemPrompt || snapshot.systemPrompt,
+    upstream: req.providerConfig?.upstream || snapshot.upstream,
+    apiKey: req.providerConfig?.apiKey || snapshot.apiKey,
+    modelId: req.providerConfig?.modelId || snapshot.modelId,
+    maxTokens: req.providerConfig?.maxTokens || snapshot.maxTokens,
+    contextLength: req.providerConfig?.contextLength || snapshot.contextLength,
+    autoCompactLength: req.providerConfig?.autoCompactLength || snapshot.autoCompactLength,
+    toolServers: req.toolServerConfig?.length ? JSON.stringify(req.toolServerConfig.map(e => ({ type: e.type, config: e.config ?? {} }))) : snapshot.toolServers,
+    skills: req.skillConfig?.length ? JSON.stringify(req.skillConfig.map(s => ({ slug: s.slug }))) : snapshot.skills,
+    extraPkgs: req.extraPackage?.length ? JSON.stringify(req.extraPackage) : snapshot.extraPkgs,
+  }
+}
+
+export function registerSessionHandlers(db: DB, wm: IWorkspaceManager, tsm: IToolServerManager) {
   return {
     listSessions(req: ListSessionsRequest) {
       return unwrap(dbQuery(async () => {
         let query = db.selectFrom("registry_sessions").selectAll()
         if (req.state) query = query.where("state", "=", req.state)
         const sessions: Session[] = await query.orderBy("createdAt", "desc").execute()
-        const result = []
-        for (const s of sessions) {
-          result.push(await buildSessionInfo(db, s))
-        }
-        return { sessions: result }
+        return { sessions: sessions.map(sessionToInfo) }
       }))
     },
 
@@ -91,36 +97,56 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
         const s = await db.selectFrom("registry_sessions").selectAll()
           .where("id", "=", req.sessionId).executeTakeFirst()
         if (!s) throw new ConnectError("Session not found", Code.NotFound)
-        return buildSessionInfo(db, s)
+        return sessionToInfo(s)
       }))
     },
 
     createSession(req: CreateSessionRequest) {
       return unwrap(dbQuery(async () => {
-        const role = await db.selectFrom("registry_roles").selectAll()
-          .where("id", "=", req.roleId).executeTakeFirst()
-        if (!role) throw new ConnectError("Role not found", Code.NotFound)
+        let snapshot: SnapshotFields
+
+        if (req.templateId) {
+          const template = await db.selectFrom("session_templates").selectAll()
+            .where("id", "=", req.templateId).executeTakeFirst()
+          if (!template) throw new ConnectError("Template not found", Code.NotFound)
+          snapshot = applyOverrides(templateToSnapshot(template), req)
+        } else {
+          snapshot = {
+            systemPrompt: req.systemPrompt ?? "",
+            upstream: req.providerConfig?.upstream ?? "",
+            apiKey: req.providerConfig?.apiKey ?? "",
+            modelId: req.providerConfig?.modelId ?? "",
+            maxTokens: req.providerConfig?.maxTokens ?? 0,
+            contextLength: req.providerConfig?.contextLength ?? 0,
+            autoCompactLength: req.providerConfig?.autoCompactLength ?? 0,
+            toolServers: req.toolServerConfig?.length ? JSON.stringify(req.toolServerConfig.map(e => ({ type: e.type, config: e.config ?? {} }))) : "[]",
+            skills: req.skillConfig?.length ? JSON.stringify(req.skillConfig.map(s => ({ slug: s.slug }))) : "[]",
+            extraPkgs: req.extraPackage?.length ? JSON.stringify(req.extraPackage) : "[]",
+          }
+        }
 
         const sessionId = randomUUID()
         const token = `stk-${randomUUID()}`
         const ts = now()
 
-        const workspaceId = randomUUID()
-        const volumeName = `ws-${workspaceId.slice(0, 12)}`
-
-        await podman.createVolume(volumeName)
-
-        await db.insertInto("registry_workspaces").values({
-          id: workspaceId, volumeName, state: "active",
-          boundSessionId: sessionId,
-          createdAt: ts, updatedAt: ts,
-        }).execute()
+        let workspaceId = req.workspaceId
+        if (!workspaceId) {
+          const wmResult = await wm.createWorkspace(sessionId)
+          if (wmResult.isErr()) throw new ConnectError(`WM createWorkspace failed: ${wmResult.error.message}`, Code.Internal)
+          workspaceId = wmResult.value.workspaceId
+        }
 
         await db.insertInto("registry_sessions").values({
-          id: sessionId, title: req.title ?? "", roleId: req.roleId,
+          id: sessionId, title: req.title ?? "", templateId: req.templateId ?? "",
+          state: "stopped",
+          systemPrompt: snapshot.systemPrompt,
+          upstream: snapshot.upstream, apiKey: snapshot.apiKey, modelId: snapshot.modelId,
+          maxTokens: snapshot.maxTokens, contextLength: snapshot.contextLength,
+          autoCompactLength: snapshot.autoCompactLength,
+          toolServers: snapshot.toolServers, skills: snapshot.skills, extraPkgs: snapshot.extraPkgs,
           workerId: "", agentId: "",
-          sessionToken: token, state: "stopped",
-          workspaceId, inputTokens: 0n, outputTokens: 0n, lastActiveAt: 0n,
+          sessionToken: token, workspaceId,
+          inputTokens: 0n, outputTokens: 0n, lastActiveAt: 0n,
           createdAt: ts, updatedAt: ts,
         }).execute()
 
@@ -129,7 +155,7 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
         return {
           sessionId,
           sessionToken: token,
-          session: await buildSessionInfo(db, s!),
+          session: sessionToInfo(s!),
         }
       }))
     },
@@ -144,31 +170,89 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
         const s = await db.selectFrom("registry_sessions").selectAll()
           .where("id", "=", req.sessionId).executeTakeFirst()
         if (!s) throw new ConnectError("Session not found", Code.NotFound)
-        return buildSessionInfo(db, s)
+        return sessionToInfo(s)
       }))
     },
 
-    switchSessionRole(req: SwitchSessionRoleRequest) {
+    updateSessionHotConfig(req: UpdateSessionHotConfigRequest) {
+      return unwrap(dbQuery(async () => {
+        const ts = now()
+        const updates: Record<string, unknown> = { updatedAt: ts }
+        if (req.systemPrompt) updates.systemPrompt = req.systemPrompt
+        if (req.providerConfig) {
+          const pc = req.providerConfig
+          if (pc.upstream) updates.upstream = pc.upstream
+          if (pc.apiKey) updates.apiKey = pc.apiKey
+          if (pc.modelId) updates.modelId = pc.modelId
+          if (pc.maxTokens) updates.maxTokens = pc.maxTokens
+          if (pc.contextLength) updates.contextLength = pc.contextLength
+          if (pc.autoCompactLength) updates.autoCompactLength = pc.autoCompactLength
+        }
+        if (req.skillConfig?.length) {
+          updates.skills = JSON.stringify(req.skillConfig.map(s => ({ slug: s.slug })))
+        }
+        await db.updateTable("registry_sessions").set(updates)
+          .where("id", "=", req.sessionId).execute()
+        const s = await db.selectFrom("registry_sessions").selectAll()
+          .where("id", "=", req.sessionId).executeTakeFirst()
+        if (!s) throw new ConnectError("Session not found", Code.NotFound)
+        return sessionToInfo(s)
+      }))
+    },
+
+    updateSessionColdConfig(req: UpdateSessionColdConfigRequest) {
       return unwrap(dbQuery(async () => {
         const session = await db.selectFrom("registry_sessions").selectAll()
           .where("id", "=", req.sessionId).executeTakeFirst()
         if (!session) throw new ConnectError("Session not found", Code.NotFound)
         if (session.state !== "stopped") {
-          throw new ConnectError("Cannot switch role on a running session. Stop it first.", Code.FailedPrecondition)
+          throw new ConnectError("Cold config changes require session to be stopped", Code.FailedPrecondition)
         }
 
-        const role = await db.selectFrom("registry_roles").selectAll()
-          .where("id", "=", req.roleId).executeTakeFirst()
-        if (!role) throw new ConnectError("Role not found", Code.NotFound)
+        const ts = now()
+        const updates: Record<string, unknown> = { updatedAt: ts }
+        if (req.toolServerConfig?.length) {
+          updates.toolServers = JSON.stringify(req.toolServerConfig.map(e => ({ type: e.type, config: e.config ?? {} })))
+        }
+        if (req.extraPackage?.length) {
+          updates.extraPkgs = JSON.stringify(req.extraPackage)
+        }
+        await db.updateTable("registry_sessions").set(updates)
+          .where("id", "=", req.sessionId).execute()
+        const s = await db.selectFrom("registry_sessions").selectAll()
+          .where("id", "=", req.sessionId).executeTakeFirst()
+        return sessionToInfo(s!)
+      }))
+    },
 
+    switchSessionTemplate(req: SwitchSessionTemplateRequest) {
+      return unwrap(dbQuery(async () => {
+        const session = await db.selectFrom("registry_sessions").selectAll()
+          .where("id", "=", req.sessionId).executeTakeFirst()
+        if (!session) throw new ConnectError("Session not found", Code.NotFound)
+        if (session.state !== "stopped") {
+          throw new ConnectError("Cannot switch template on a running session", Code.FailedPrecondition)
+        }
+
+        const template = await db.selectFrom("session_templates").selectAll()
+          .where("id", "=", req.templateId).executeTakeFirst()
+        if (!template) throw new ConnectError("Template not found", Code.NotFound)
+
+        const snapshot = templateToSnapshot(template)
         const ts = now()
         await db.updateTable("registry_sessions").set({
-          roleId: req.roleId, updatedAt: ts,
+          templateId: req.templateId,
+          systemPrompt: snapshot.systemPrompt,
+          upstream: snapshot.upstream, apiKey: snapshot.apiKey, modelId: snapshot.modelId,
+          maxTokens: snapshot.maxTokens, contextLength: snapshot.contextLength,
+          autoCompactLength: snapshot.autoCompactLength,
+          toolServers: snapshot.toolServers, skills: snapshot.skills, extraPkgs: snapshot.extraPkgs,
+          updatedAt: ts,
         }).where("id", "=", req.sessionId).execute()
 
         const s = await db.selectFrom("registry_sessions").selectAll()
           .where("id", "=", req.sessionId).executeTakeFirst()
-        return buildSessionInfo(db, s!)
+        return sessionToInfo(s!)
       }))
     },
 
@@ -178,20 +262,25 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
           .where("id", "=", req.sessionId).executeTakeFirst()
         if (!session) throw new ConnectError("Session not found", Code.NotFound)
         if (session.state !== "stopped") {
-          throw new ConnectError("Cannot delete a running session. Stop it first.", Code.FailedPrecondition)
-        }
-
-        if (session.workspaceId) {
-          const ws = await db.selectFrom("registry_workspaces").selectAll()
-            .where("id", "=", session.workspaceId).executeTakeFirst()
-          if (ws) {
-            try { await podman.removeVolume(ws.volumeName) } catch { /* volume may already be gone */ }
-            await db.deleteFrom("registry_workspaces").where("id", "=", ws.id).execute()
-          }
+          throw new ConnectError("Cannot delete a running session", Code.FailedPrecondition)
         }
 
         await db.deleteFrom("registry_messages").where("sessionId", "=", req.sessionId).execute()
         await db.deleteFrom("registry_sessions").where("id", "=", req.sessionId).execute()
+
+        if (session.workspaceId) {
+          const remaining = await db.selectFrom("registry_sessions")
+            .select(["id"])
+            .where("workspaceId", "=", session.workspaceId)
+            .execute()
+          if (remaining.length === 0) {
+            const delResult = await wm.deleteWorkspace(session.workspaceId)
+            if (delResult.isErr()) {
+              console.error(`WM deleteWorkspace failed: ${delResult.error.message}`)
+            }
+          }
+        }
+
         return {}
       }))
     },
@@ -210,54 +299,37 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
           state: "creating", updatedAt: ts,
         }).where("id", "=", req.sessionId).execute()
 
-        const role = await db.selectFrom("registry_roles").selectAll()
-          .where("id", "=", session.roleId).executeTakeFirst()
-
-        const workspace = session.workspaceId
-          ? await db.selectFrom("registry_workspaces").selectAll().where("id", "=", session.workspaceId).executeTakeFirst()
-          : undefined
-
-        const workerId = randomUUID()
-        const containerName = `worker-${workerId.slice(0, 12)}`
-        const secret = randomUUID()
-
-        const zcpEntries = role ? parseZcpServers(role.zcpServers) : []
-        const zcpServers = await resolveZcpServerUrls(db, zcpEntries)
-        const nixPkgs = role ? role.extraPkgs : "[]"
-
-        try {
-          await podman.createContainer({
-            name: containerName,
-            image: workerImage,
-            env: {
-              REGISTRY_URL: process.env.REGISTRY_INTERNAL_URL ?? "http://registry:25000",
-              WORKER_ID: workerId,
-              WORKER_SECRET: secret,
-              SESSION_TOKEN: session.sessionToken,
-              NIX_PKGS: nixPkgs,
-            },
-            volumes: workspace
-              ? [{ name: workspace.volumeName, destination: "/data/workspace" }]
-              : [],
-          })
-          await podman.startContainer(containerName)
-        } catch (err) {
+        if (!session.workspaceId) {
           await db.updateTable("registry_sessions").set({
             state: "stopped", updatedAt: now(),
           }).where("id", "=", req.sessionId).execute()
-          throw new ConnectError(`Failed to start worker: ${err}`, Code.Internal)
+          throw new ConnectError("Session has no workspace", Code.Internal)
         }
 
+        const workerImage = process.env.WORKER_IMAGE ?? "localhost/openzerg/worker:latest"
+
+        const startResult = await wm.ensureWorkspaceWorker({
+          workspaceId: session.workspaceId,
+          image: workerImage,
+          env: {
+            REGISTRY_URL: process.env.REGISTRY_INTERNAL_URL ?? "http://registry:25000",
+            SESSION_TOKEN: session.sessionToken,
+            NIX_PKGS: JSON.stringify((safeParseJson(session.extraPkgs || "[]") ?? []) as string[]),
+          },
+        })
+
+        if (startResult.isErr()) {
+          await db.updateTable("registry_sessions").set({
+            state: "stopped", updatedAt: now(),
+          }).where("id", "=", req.sessionId).execute()
+          throw new ConnectError(`WM ensureWorkspaceWorker failed: ${startResult.error.message}`, Code.Internal)
+        }
+
+        const workerResp = startResult.value
         const ts2 = now()
         await db.updateTable("registry_sessions").set({
-          state: "idle", workerId, lastActiveAt: ts2, updatedAt: ts2,
+          state: "idle", workerId: workerResp.workerId, lastActiveAt: ts2, updatedAt: ts2,
         }).where("id", "=", req.sessionId).execute()
-
-        if (workspace) {
-          await db.updateTable("registry_workspaces").set({
-            state: "active", updatedAt: ts2,
-          }).where("id", "=", workspace.id).execute()
-        }
 
         return {}
       }))
@@ -270,25 +342,10 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
         if (!session) throw new ConnectError("Session not found", Code.NotFound)
         if (session.state === "stopped") return {}
 
-        if (session.workerId) {
-          const worker = await db.selectFrom("registry_workers").selectAll()
-            .where("id", "=", session.workerId).executeTakeFirst()
-          if (worker) {
-            try { await podman.stopContainer(worker.containerName) } catch { /* may already be stopped */ }
-            try { await podman.removeContainer(worker.containerName) } catch { /* may already be removed */ }
-          }
-        }
-
         const ts = now()
         await db.updateTable("registry_sessions").set({
           state: "stopped", workerId: "", updatedAt: ts,
         }).where("id", "=", req.sessionId).execute()
-
-        if (session.workspaceId) {
-          await db.updateTable("registry_workspaces").set({
-            state: "stopped", updatedAt: ts,
-          }).where("id", "=", session.workspaceId).execute()
-        }
 
         return {}
       }))
@@ -300,38 +357,49 @@ export function registerSessionHandlers(db: DB, podman: PodmanClient, workerImag
           .where("sessionToken", "=", req.sessionToken).executeTakeFirst()
         if (!session) throw new ConnectError("Session not found", Code.NotFound)
 
-        const role: Role | undefined = session.roleId
-          ? await db.selectFrom("registry_roles").selectAll().where("id", "=", session.roleId).executeTakeFirst()
-          : undefined
-
         let workerUrl = ""
         let workerSecret = ""
         let workspaceRoot = ""
         if (session.workerId) {
-          const worker = await db.selectFrom("registry_workers").selectAll()
+          const worker = await db.selectFrom("wm_workers").selectAll()
             .where("id", "=", session.workerId).executeTakeFirst()
           if (worker) {
-            workerUrl = worker.containerName.startsWith("http") ? worker.containerName : `http://${worker.containerName}`
+            workerUrl = worker.filesystemUrl || `http://${worker.containerName}`
             workerSecret = worker.secret
             workspaceRoot = worker.workspaceRoot
           }
         }
 
-        const serverEntries = role ? parseZcpServers(role.zcpServers) : []
-        const zcpServerUrls = await resolveZcpServerUrls(db, serverEntries)
+        const serverEntries = (safeParseJson(session.toolServers || "[]") ?? []) as Array<{ type: string; config?: Record<string, string> }>
+        const serverTypes = serverEntries.map(e => e.type).filter(Boolean)
+        const configMap = new Map(serverEntries.map(e => [e.type, e.config ?? {}]))
+
+        let toolServerUrls: Array<{ name: string; url: string; config: string }> = []
+        if (serverTypes.length > 0) {
+          const toolsResult = await tsm.resolveTools(session.id, serverTypes)
+          if (toolsResult.isOk()) {
+            toolServerUrls = toolsResult.value.toolServerUrls.map(u => ({
+              name: u.name, url: u.url, config: typeof u.config === "string" ? u.config : JSON.stringify(u.config),
+            }))
+          }
+        }
 
         return {
           sessionId: session.id,
-          roleId: session.roleId,
-          roleInfo: role ? roleRowToInfo(role) : {
-            id: "", name: "", description: "", systemPrompt: "",
-            aiProxyId: "", zcpServers: "[]", skills: "[]", extraPkgs: "[]", maxSteps: 50,
-            createdAt: 0n, updatedAt: 0n,
+          templateId: session.templateId,
+          systemPrompt: session.systemPrompt,
+          providerConfig: {
+            upstream: session.upstream, apiKey: session.apiKey, modelId: session.modelId,
+            maxTokens: session.maxTokens, contextLength: session.contextLength,
+            autoCompactLength: session.autoCompactLength,
           },
+          toolServerConfig: serverEntries.map(e => ({ type: e.type, config: e.config ?? {} })),
+          skillConfig: (safeParseJson(session.skills || "[]") ?? []) as Array<{ slug: string }>,
+          extraPackage: (safeParseJson(session.extraPkgs || "[]") ?? []) as string[],
           workerId: session.workerId,
           workerUrl, workerSecret, workspaceRoot,
           agentUrl: session.agentId,
-          zcpServerUrls,
+          toolServerUrls,
           workspaceId: session.workspaceId,
         }
       }))

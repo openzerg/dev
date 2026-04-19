@@ -36,7 +36,7 @@ export function runReadFile(req: ReadFileRequest): ResultAsync<ReadFileResponse,
 export function runWriteFile(req: WriteFileRequest): ResultAsync<WriteFileResponse, AppError> {
   return new ResultAsync((async (): Promise<Result<WriteFileResponse, AppError>> => {
     if (req.expectedMtimeMs !== 0n) {
-      const stR = await ResultAsync.fromPromise(fsStat(req.path), () => null as unknown as AppError)
+      const stR = await ResultAsync.fromPromise(fsStat(req.path), () => undefined)
       if (stR.isOk()) {
         const currentMtime = BigInt(Math.floor(stR.value.mtimeMs))
         const tolerance = 50n

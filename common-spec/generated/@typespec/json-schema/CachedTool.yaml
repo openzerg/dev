@@ -1,0 +1,46 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: CachedTool.yaml
+type: object
+properties:
+  id:
+    type: string
+  serviceId:
+    type: string
+  toolName:
+    type: string
+  description:
+    type: string
+  inputSchemaJson:
+    type: string
+  outputSchemaJson:
+    type: string
+  group:
+    type: string
+  priority:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  dependencies:
+    type: string
+  createdAt:
+    type: string
+  updatedAt:
+    type: string
+required:
+  - id
+  - serviceId
+  - toolName
+  - description
+  - inputSchemaJson
+  - outputSchemaJson
+  - group
+  - priority
+  - dependencies
+  - createdAt
+  - updatedAt
+x-indexes:
+  - - serviceId
+  - - toolName
+  - - group
+x-primary-key: id
+x-table: cached_tools

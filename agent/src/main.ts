@@ -1,6 +1,6 @@
 import { createServer } from "node:http"
 import { connectNodeAdapter } from "@connectrpc/connect-node"
-import { RegistryClient, AiProxyClient } from "@openzerg/common"
+import { RegistryClient, AiProxyClient, ToolServerManagerClient } from "@openzerg/common"
 import { openDB } from "./db/index.js"
 import { EventBus } from "./event-bus/index.js"
 import { SessionStateManager } from "./service/session-state.js"
@@ -22,7 +22,11 @@ async function main() {
     console.log("[agent] no AI_PROXY_URL, will resolve providers from DB directly")
   }
 
-  const agentLoop = new AgentLoop(db, eventBus, stateManager, aiProxyClient)
+  const tsm = new ToolServerManagerClient({
+    baseURL: process.env.TSM_URL || "http://localhost:25021",
+  })
+
+  const agentLoop = new AgentLoop(db, eventBus, stateManager, tsm)
   const router = createAgentRouter(db, agentLoop, eventBus, stateManager)
 
   const handler = connectNodeAdapter({ routes: router })

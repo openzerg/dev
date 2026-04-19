@@ -1,6 +1,7 @@
 node_modules/
 bun.lock
 *.lockb
+package-lock.json
 dist/
 .turbo/
 .next/
@@ -10,3 +11,5 @@ dist/
 .env.*
 .DS_Store
 tsp-output/
+test-results/
+/tmp/

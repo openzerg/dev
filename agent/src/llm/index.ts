@@ -1,4 +1,12 @@
 import OpenAI from "openai"
+import type {
+  ChatCompletionMessageParam,
+  ChatCompletionTool,
+  ChatCompletionSystemMessageParam,
+  ChatCompletionUserMessageParam,
+  ChatCompletionAssistantMessageParam,
+  ChatCompletionToolMessageParam,
+} from "openai/resources/chat/completions/completions.js"
 
 export interface LLMConfig {
   baseUrl: string
@@ -38,6 +46,42 @@ export interface StreamChunk {
   finishReason?: string
 }
 
+function toSDKMessage(m: LLMMessage): ChatCompletionMessageParam {
+  switch (m.role) {
+    case "system":
+      return { role: "system", content: m.content ?? "" } satisfies ChatCompletionSystemMessageParam
+    case "user":
+      return { role: "user", content: m.content ?? "" } satisfies ChatCompletionUserMessageParam
+    case "assistant":
+      return {
+        role: "assistant",
+        content: m.content ?? null,
+        tool_calls: m.tool_calls?.map(tc => ({
+          id: tc.id,
+          type: "function" as const,
+          function: { name: tc.function.name, arguments: tc.function.arguments },
+        })),
+      } satisfies ChatCompletionAssistantMessageParam
+    case "tool":
+      return {
+        role: "tool",
+        content: m.content ?? "",
+        tool_call_id: m.tool_call_id ?? "",
+      } satisfies ChatCompletionToolMessageParam
+  }
+}
+
+function toSDKTools(tools: LLMTool[]): ChatCompletionTool[] {
+  return tools.map(t => ({
+    type: "function" as const,
+    function: {
+      name: t.function.name,
+      description: t.function.description,
+      parameters: (t.function.parameters ?? {}) as Record<string, unknown>,
+    },
+  }))
+}
+
 export class LLMClient {
   private client: OpenAI
   private model: string
@@ -52,7 +96,7 @@ export class LLMClient {
   async complete(messages: LLMMessage[], signal?: AbortSignal): Promise<string> {
     const resp = await this.client.chat.completions.create({
       model: this.model,
-      messages: messages as any,
+      messages: messages.map(toSDKMessage),
       max_tokens: this.maxTokens,
     }, { signal })
     return resp.choices[0]?.message?.content ?? ""
@@ -65,8 +109,8 @@ export class LLMClient {
   ): AsyncGenerator<StreamChunk> {
     const stream = await this.client.chat.completions.create({
       model: this.model,
-      messages: messages as any,
-      tools: tools?.length ? tools as any : undefined,
+      messages: messages.map(toSDKMessage),
+      tools: tools?.length ? toSDKTools(tools) : undefined,
       max_tokens: this.maxTokens,
       stream: true,
       stream_options: { include_usage: true },

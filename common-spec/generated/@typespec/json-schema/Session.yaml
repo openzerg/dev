@@ -6,15 +6,41 @@ properties:
     type: string
   title:
     type: string
-  roleId:
+  templateId:
+    type: string
+  state:
+    type: string
+  systemPrompt:
+    type: string
+  upstream:
+    type: string
+  apiKey:
+    type: string
+  modelId:
+    type: string
+  maxTokens:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  contextLength:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  autoCompactLength:
+    type: integer
+    minimum: -2147483648
+    maximum: 2147483647
+  toolServers:
+    type: string
+  skills:
+    type: string
+  extraPkgs:
     type: string
   workerId:
     type: string
   agentId:
     type: string
   sessionToken:
-    type: string
-  state:
     type: string
   workspaceId:
     type: string
@@ -31,11 +57,21 @@ properties:
 required:
   - id
   - title
-  - roleId
+  - templateId
+  - state
+  - systemPrompt
+  - upstream
+  - apiKey
+  - modelId
+  - maxTokens
+  - contextLength
+  - autoCompactLength
+  - toolServers
+  - skills
+  - extraPkgs
   - workerId
   - agentId
   - sessionToken
-  - state
   - workspaceId
   - inputTokens
   - outputTokens
@@ -43,7 +79,7 @@ required:
   - createdAt
   - updatedAt
 x-indexes:
-  - - roleId
+  - - templateId
   - - workerId
   - - agentId
   - - state

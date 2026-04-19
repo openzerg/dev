@@ -16,6 +16,8 @@
     "./gen/worker/v1_pb": "./generated/ts/gen/worker/v1_pb.ts",
     "./gen/agent/v1_pb": "./generated/ts/gen/agent/v1_pb.ts",
     "./gen/skillmanager/v1_pb": "./generated/ts/gen/skillmanager/v1_pb.ts",
+    "./gen/workspacemanager/v1_pb": "./generated/ts/gen/workspacemanager/v1_pb.ts",
+    "./gen/toolservermanager/v1_pb": "./generated/ts/gen/toolservermanager/v1_pb.ts",
     "./entities/*": "./generated/ts/entities/*.ts"
   },
   "scripts": {

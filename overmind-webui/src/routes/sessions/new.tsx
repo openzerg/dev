@@ -9,6 +9,7 @@ import {
   Alert,
   CircularProgress,
 } from "@suid/material";
+import ArrowBack from "@suid/icons-material/ArrowBack";
 import { getRegistry } from "~/lib/clients";
 import { unwrap } from "~/lib/result";
 import { useI18n } from "~/i18n/context";
@@ -18,25 +19,27 @@ export default function SessionNewPage() {
   const registry = getRegistry();
   const { t } = useI18n();
 
-  const [roles] = createResource(async () => {
+  const [templates] = createResource(async () => {
     try {
-      const r = await registry.listRoles();
-      if (r.isErr()) return { roles: [] };
+      const r = await registry.listTemplates();
+      if (r.isErr()) return { templates: [] };
       return r.value;
-    } catch { return { roles: [] }; }
+    } catch { return { templates: [] }; }
   });
 
   const [title, setTitle] = createSignal("");
-  const [roleId, setRoleId] = createSignal("");
+  const [templateId, setTemplateId] = createSignal("");
   const [creating, setCreating] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
   async function handleCreate() {
-    if (!title() || !roleId()) return;
+    if (!title()) return;
     setCreating(true);
     setError(null);
     try {
-      const r = await registry.createSession({ title: title(), roleId: roleId() });
+      const req: any = { title: title() };
+      if (templateId()) req.templateId = templateId();
+      const r = await registry.createSession(req);
       const resp = unwrap(r);
       navigate(`/sessions/${resp.sessionId}`);
     } catch (e: any) {
@@ -48,9 +51,14 @@ export default function SessionNewPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 3 }}>
-        {t().sessions.newSession}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+        <Button startIcon={<ArrowBack />} onClick={() => navigate("/sessions")}>
+          {t().actions.back}
+        </Button>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+          {t().sessions.newSession}
+        </Typography>
+      </Box>
 
       <Show when={error()}>
         <Alert severity="error" sx={{ mb: 2 }}>{error()}</Alert>
@@ -63,16 +71,16 @@ export default function SessionNewPage() {
           onChange={(_, v) => setTitle(v)}
         />
 
-        <Show when={!roles.loading} fallback={<CircularProgress />}>
+        <Show when={!templates.loading} fallback={<CircularProgress />}>
           <TextField
             select
             label={t().common.role}
-            value={roleId()}
-            onChange={(_, v) => setRoleId(v)}
+            value={templateId()}
+            onChange={(_, v) => setTemplateId(v)}
           >
-            <MenuItem value="">Select a role</MenuItem>
-            <For each={roles()?.roles || []}>
-              {(role: any) => <MenuItem value={role.id}>{role.name}</MenuItem>}
+            <MenuItem value="">— {t().actions.create} —</MenuItem>
+            <For each={templates()?.templates || []}>
+              {(tpl: any) => <MenuItem value={tpl.id}>{tpl.name}</MenuItem>}
             </For>
           </TextField>
         </Show>
@@ -80,7 +88,7 @@ export default function SessionNewPage() {
         <Button
           variant="contained"
           onClick={handleCreate}
-          disabled={creating() || !title() || !roleId()}
+          disabled={creating() || !title()}
         >
           {creating() ? t().common.loading : t().actions.create}
         </Button>
