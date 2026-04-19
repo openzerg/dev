@@ -52,7 +52,7 @@ afterAll(async () => {
     try { await podClient.removeVolume(name) } catch {}
   }
   server?.close()
-})
+}, 30_000)
 
 describe("Workspace Manager E2E — Real Podman", () => {
   test("create workspace creates real Podman volume", async () => {
@@ -72,7 +72,7 @@ describe("Workspace Manager E2E — Real Podman", () => {
     expect(ws.isOk()).toBe(true)
     if (!ws.isOk()) return
     expect(ws.value.state).toBe("active")
-  })
+  }, 30_000)
 
   test("start worker creates and starts real container", async () => {
     const sessionId = randomUUID()
@@ -102,7 +102,7 @@ describe("Workspace Manager E2E — Real Podman", () => {
 
     const info = await podClient.inspectPod(result.value.containerName)
     expect(info.state).toBe("running")
-  })
+  }, 30_000)
 
   test("stop worker stops and removes real container", async () => {
     const sessionId = randomUUID()
@@ -135,7 +135,7 @@ describe("Workspace Manager E2E — Real Podman", () => {
     expect(status.value.state).toBe("stopped")
 
     console.log(`[e2e] worker ${worker.value.containerName} stopped`)
-  })
+  }, 30_000)
 
   test("delete workspace removes real Podman volume", async () => {
     const sessionId = randomUUID()
@@ -147,7 +147,7 @@ describe("Workspace Manager E2E — Real Podman", () => {
     expect(del.isOk()).toBe(true)
 
     console.log(`[e2e] workspace ${ws.value.volumeName} deleted`)
-  })
+  }, 30_000)
 
   test("full lifecycle: workspace → worker → stop → delete", async () => {
     const sessionId = randomUUID()
@@ -181,5 +181,5 @@ describe("Workspace Manager E2E — Real Podman", () => {
     await client.deleteWorkspace(ws.value.workspaceId)
 
     console.log(`[e2e] full lifecycle complete for session ${sessionId}`)
-  })
+  }, 30_000)
 })

@@ -15,6 +15,27 @@ export function openDB(databaseURL: string): DB {
 export async function autoMigrate(databaseURL: string): Promise<void> {
   const db = openDB(databaseURL)
   try {
+    await db.schema.createTable("registry_instances")
+      .ifNotExists()
+      .addColumn("id", "text", c => c.notNull().primaryKey())
+      .addColumn("name", "text", c => c.notNull())
+      .addColumn("instanceType", "text", c => c.notNull())
+      .addColumn("ip", "text", c => c.notNull())
+      .addColumn("port", "integer", c => c.notNull())
+      .addColumn("publicUrl", "text", c => c.notNull())
+      .addColumn("lifecycle", "text", c => c.notNull().defaultTo("active"))
+      .addColumn("lastSeen", "bigint", c => c.notNull().defaultTo(0n))
+      .addColumn("metadata", "text", c => c.notNull().defaultTo("{}"))
+      .addColumn("createdAt", "bigint", c => c.notNull())
+      .addColumn("updatedAt", "bigint", c => c.notNull())
+      .execute()
+
+    await db.schema.createIndex("idx_registry_instances_instanceType")
+      .ifNotExists()
+      .on("registry_instances")
+      .column("instanceType")
+      .execute()
+
     await db.schema.createTable("cached_tools")
       .ifNotExists()
       .addColumn("id", "text", c => c.notNull().primaryKey())

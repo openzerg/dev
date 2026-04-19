@@ -77,7 +77,7 @@ afterAll(async () => {
   try { execSync("podman rm -f e2e-tsm-k8s-pg", { stdio: "pipe" }) } catch {}
   server?.close()
   await db?.destroy()
-})
+}, 30_000)
 
 describe("Tool Server Manager E2E — k3s Kubernetes", () => {
   test("health check", async () => {
@@ -86,7 +86,7 @@ describe("Tool Server Manager E2E — k3s Kubernetes", () => {
     if (result.isOk()) {
       expect(result.value.status).toBe("ok")
     }
-  })
+  }, 30_000)
 
   test("startToolServer creates k8s Pod", async () => {
     const result = await client.startToolServer({
@@ -104,7 +104,7 @@ describe("Tool Server Manager E2E — k3s Kubernetes", () => {
     createdPods.push(result.value.containerName)
 
     console.log(`[k8s-e2e] tool server pod ${result.value.containerName} created`)
-  })
+  }, 30_000)
 
   test("listToolServers shows running instance", async () => {
     const result = await client.listToolServers()
@@ -113,7 +113,7 @@ describe("Tool Server Manager E2E — k3s Kubernetes", () => {
     const found = result.value.servers.find(s => s.type === "tool-fs-k8s")
     expect(found).toBeDefined()
     expect(found!.lifecycle).toBe("active")
-  })
+  }, 30_000)
 
   test("stopToolServer deletes k8s Pod", async () => {
     const result = await client.startToolServer({
@@ -134,5 +134,5 @@ describe("Tool Server Manager E2E — k3s Kubernetes", () => {
     expect(row?.lifecycle).toBe("stopped")
 
     console.log(`[k8s-e2e] tool server tool-stop-k8s stopped`)
-  })
+  }, 30_000)
 })

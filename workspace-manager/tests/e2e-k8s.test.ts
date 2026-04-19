@@ -66,7 +66,7 @@ afterAll(async () => {
   }
   try { execSync("podman rm -f e2e-wm-k8s-pg", { stdio: "pipe" }) } catch {}
   server?.close()
-})
+}, 30_000)
 
 describe("Workspace Manager E2E — k3s Kubernetes", () => {
   test("health check", async () => {
@@ -75,7 +75,7 @@ describe("Workspace Manager E2E — k3s Kubernetes", () => {
     if (result.isOk()) {
       expect(result.value.status).toBe("ok")
     }
-  })
+  }, 30_000)
 
   test("create workspace creates PVC in k8s", async () => {
     const sessionId = randomUUID()
@@ -89,7 +89,7 @@ describe("Workspace Manager E2E — k3s Kubernetes", () => {
     createdPVCs.push(result.value.volumeName)
 
     console.log(`[k8s-e2e] PVC ${result.value.volumeName} created`)
-  })
+  }, 30_000)
 
   test("start worker creates k8s Pod", async () => {
     const sessionId = randomUUID()
@@ -120,14 +120,14 @@ describe("Workspace Manager E2E — k3s Kubernetes", () => {
     const info = await k8s.inspectPod(result.value.containerName)
     expect(info.state).toMatch(/running|pending/)
     console.log(`[k8s-e2e] pod state: ${info.state}`)
-  })
+  }, 30_000)
 
   test("list workers", async () => {
     const result = await client.listWorkers()
     expect(result.isOk()).toBe(true)
     if (!result.isOk()) return
     expect(result.value.workers.length).toBeGreaterThanOrEqual(1)
-  })
+  }, 30_000)
 
   test("stop worker deletes k8s Pod", async () => {
     const sessionId = randomUUID()
@@ -156,7 +156,7 @@ describe("Workspace Manager E2E — k3s Kubernetes", () => {
     expect(status.value.state).toBe("stopped")
 
     console.log(`[k8s-e2e] worker ${worker.value.containerName} stopped`)
-  })
+  }, 30_000)
 
   test("delete workspace removes PVC", async () => {
     const sessionId = randomUUID()
@@ -168,5 +168,5 @@ describe("Workspace Manager E2E — k3s Kubernetes", () => {
     expect(del.isOk()).toBe(true)
 
     console.log(`[k8s-e2e] workspace ${ws.value.volumeName} deleted`)
-  })
+  }, 30_000)
 })

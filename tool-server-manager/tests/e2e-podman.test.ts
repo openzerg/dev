@@ -73,7 +73,7 @@ afterAll(async () => {
   }
   server?.close()
   await db?.destroy()
-})
+}, 30_000)
 
 describe("Tool Server Manager E2E — Real Podman", () => {
   test("startToolServer creates and starts real container", async () => {
@@ -94,7 +94,7 @@ describe("Tool Server Manager E2E — Real Podman", () => {
 
     const info = await podClient.inspectPod(result.value.containerName)
     expect(info.state).toBe("running")
-  })
+  }, 30_000)
 
   test("listToolServers shows running instance", async () => {
     const ts = BigInt(Date.now())
@@ -120,7 +120,7 @@ describe("Tool Server Manager E2E — Real Podman", () => {
     expect(found).toBeDefined()
     expect(found!.type).toBe("tool-test-real")
     expect(found!.lifecycle).toBe("active")
-  })
+  }, 30_000)
 
   test("stopToolServer stops running containers by type", async () => {
     const ts = BigInt(Date.now())
@@ -160,5 +160,5 @@ describe("Tool Server Manager E2E — Real Podman", () => {
     expect(row?.lifecycle).toBe("stopped")
 
     console.log(`[e2e] tool server tool-stop-test stopped`)
-  })
+  }, 30_000)
 })

@@ -113,7 +113,7 @@ afterAll(async () => {
   tsmServer?.close()
   wmServer?.close()
   await db?.destroy()
-})
+}, 30_000)
 
 describe("TSM: start/list/stop tool-fs container", () => {
   test("startToolServer creates tool-fs container", async () => {
@@ -127,19 +127,19 @@ describe("TSM: start/list/stop tool-fs container", () => {
     expect(resp.instanceId).toBeTruthy()
     tsmContainers.push(resp.containerName)
     console.log(`[tsm] tool-fs container: ${resp.containerName}`)
-  })
+  }, 30_000)
 
   test("listToolServers shows tool-fs", async () => {
     const resp = await tsmClient.listToolServers(create(ListToolServersRequestSchema))
     const fs = resp.servers.find((s: any) => s.type === "tool-fs")
     expect(fs).toBeDefined()
-  })
+  }, 30_000)
 
   test("pod is running via PodClient", async () => {
     const info = await podClient.inspectPod(tsmContainers[tsmContainers.length - 1])
     expect(info.state).toMatch(/running|Running/)
     console.log(`[tsm] verified: ${info.name} running`)
-  })
+  }, 30_000)
 
   test("stopToolServer removes tool-fs container", async () => {
     await tsmClient.stopToolServer(create(StopToolServerRequestSchema, { type: "tool-fs" }))
@@ -147,7 +147,7 @@ describe("TSM: start/list/stop tool-fs container", () => {
     const info = await podClient.inspectPod(tsmContainers[tsmContainers.length - 1])
     expect(info.state).not.toBe("running")
     console.log(`[tsm] tool-fs stopped (state=${info.state})`)
-  })
+  }, 30_000)
 })
 
 describe("WM: workspace volume + worker container lifecycle", () => {
@@ -159,7 +159,7 @@ describe("WM: workspace volume + worker container lifecycle", () => {
     expect(resp.volumeName).toBeTruthy()
     wmVolumes.push(resp.volumeName)
     console.log(`[wm] workspace: volume=${resp.volumeName}`)
-  })
+  }, 30_000)
 
   test("startWorker creates running container with volume mount", async () => {
     const ws = await wmClient.createWorkspace(create(CreateWorkspaceRequestSchema, {
@@ -179,13 +179,13 @@ describe("WM: workspace volume + worker container lifecycle", () => {
     wmContainers.push(resp.containerName)
     lastWorkerId = resp.workerId
     console.log(`[wm] worker: ${resp.containerName} (id=${resp.workerId})`)
-  })
+  }, 30_000)
 
   test("worker pod is running via PodClient", async () => {
     const info = await podClient.inspectPod(wmContainers[wmContainers.length - 1])
     expect(info.state).toMatch(/running|Running/)
     console.log(`[wm] verified: ${info.name} running`)
-  })
+  }, 30_000)
 
   test("stopWorker stops container", async () => {
     const resp = await wmClient.stopWorker(create(StopWorkerRequestSchema, {
@@ -198,5 +198,5 @@ describe("WM: workspace volume + worker container lifecycle", () => {
     }))
     expect(status.state).toBe("stopped")
     console.log(`[wm] worker stopped`)
-  })
+  }, 30_000)
 })
